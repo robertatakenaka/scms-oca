@@ -14,9 +14,22 @@ from usefulmodels.models import ThematicArea, Practice, Action
 from .forms import PolicyDirectoryFileForm, PolicyDirectoryForm
 
 from . import choices
+
+
 class PolicyDirectory(CommonControlField):
+
     class Meta:
         verbose_name_plural = _('Policy Directory')
+
+        indexes = [
+            models.Index(fields=['title']),
+            models.Index(fields=['date']),
+            models.Index(fields=['practice']),
+            models.Index(fields=['action']),
+            models.Index(fields=['classification']),
+            models.Index(fields=['source']),
+            models.Index(fields=['record_status']),
+        ]
 
     title = models.CharField(_("Title"), max_length=255, null=False, blank=False)
     link = models.URLField(_("Link"), null=False, blank=False)

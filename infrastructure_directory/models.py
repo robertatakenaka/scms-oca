@@ -16,8 +16,22 @@ from .forms import InfrastructureDirectoryFileForm, InfrastructureDirectoryForm
 
 
 class InfrastructureDirectory(CommonControlField):
+
     class Meta:
         verbose_name_plural = _('Infraestructure Directory')
+
+        indexes = [
+            models.Index(fields=['title']),
+            # models.Index(fields=['start_date']),
+            # models.Index(fields=['end_date']),
+            # models.Index(fields=['locations']),
+            models.Index(fields=['practice']),
+            models.Index(fields=['action']),
+            models.Index(fields=['classification']),
+            models.Index(fields=['source']),
+            models.Index(fields=['record_status']),
+        ]
+
 
     title = models.CharField(_("Title"), max_length=255, null=False, blank=False)
     link = models.URLField(_("Link"), null=False, blank=False)
