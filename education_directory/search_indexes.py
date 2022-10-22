@@ -93,7 +93,6 @@ class EducationIndex(indexes.SearchIndex, indexes.Indexable):
                     continue
             return regions
 
-
     def get_model(self):
         return models.EducationDirectory
 

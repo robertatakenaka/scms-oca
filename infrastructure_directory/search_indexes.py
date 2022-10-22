@@ -43,7 +43,6 @@ class InfraStructureIndex(indexes.SearchIndex, indexes.Indexable):
     def prepare_directory_type(self, obj):
         return "infrastructure_directory"
 
-
     def prepare_institutions(self, obj):
         if obj.institutions:
             return [institution.name for institution in obj.institutions.all()]
