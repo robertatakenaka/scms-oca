@@ -8,7 +8,7 @@ translates = {
     'record_type': _('Tipo de registro'),
     'directory_type': _('Diretórios'),
     'countries': _('Pais'),
-    'states': _('Estato'),
+    'states': _('Estado'),
     'cities': _('Cidade'),
     'regions': _('Região'),
     'thematic_areas': _('Áreas temáticas'),
