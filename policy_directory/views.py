@@ -71,11 +71,54 @@ def import_file(request):
     file_path = file_upload.attachment.file.path
 
     # try:
+    ACTION_NAME = 'políticas públicas e institucionais'
+    # PolicyDirectoryFile.objects.all().delete()
+
     with open(file_path, 'r') as csvfile:
         data = csv.DictReader(csvfile, delimiter=";")
 
         for line, row in enumerate(data):
-            po = PolicyDirectory()
+
+            # Action
+            if row['Action'] != ACTION_NAME and row['Action'] in ACTION_NAME:
+                row['Action'] = ACTION_NAME
+
+            if row['Action'] != ACTION_NAME:
+                messages.error(
+                    request,
+                    _("Importing %s | Invalid value in %s | line: %s | %s") %
+                    (ACTION_NAME, "Action", str(line + 2), row))
+                continue
+
+            try:
+                po = PolicyDirectory.objects.get(link=row['Link'], title=row['Title'])
+            except PolicyDirectory.DoesNotExist:
+                po = PolicyDirectory()
+            except PolicyDirectory.MultipleObjectsReturned:
+                try:
+                    PolicyDirectory.objects.filter(link=row['Link'], title=row['Title']).delete()
+                    po = PolicyDirectory()
+                except Exception as e:
+                    messages.error(
+                        request,
+                        _("Importing %s | Invalid value in %s | line: %s | %s") %
+                        (e, "row", str(line + 2), row))
+                    continue
+
+            # Action
+            try:
+                po.action = Action.objects.get(name=row['Action'])
+            except Action.DoesNotExist:
+                po.action = Action(name=row['Action'], creator=request.user)
+                po.action.save()
+
+            # Practice
+            try:
+                po.practice = Practice.objects.get(name=row['Practice'])
+            except Practice.DoesNotExist:
+                po.practice = Practice(name=row['Practice'], creator=request.user)
+                po.practice.save()
+
             po.title = row['Title']
             po.link = row['Link']
             po.description = row['Description']
@@ -110,20 +153,6 @@ def import_file(request):
 
             if row['Classification']:
                 po.classification = row['Classification']
-
-            # Practice
-            if row['Practice']:
-                practice_name = row['Practice']
-                if Practice.objects.filter(name=practice_name).exists():
-                    practice = Practice.objects.get(name=practice_name)
-                    po.practice = practice
-                else:
-                    messages.error(request, _("Unknown Practice, line: %s") % str(line + 2))
-
-            # Action
-            if row['Action']:
-                if Action.objects.filter(name__icontains="políticas públicas e institucionais").exists():
-                    po.action = Action.objects.get(name__icontains="políticas públicas e institucionais")
 
             if row['Source']:
                 po.source = row['Source']
