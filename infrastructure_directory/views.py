@@ -77,6 +77,9 @@ def import_file(request):
 
             for line, row in enumerate(data):
 
+                for k, v in row.items():
+                    row[k] = v.strip()
+
                 # Action
                 if row['Action'] != ACTION_NAME and row['Action'] in ACTION_NAME:
                     row['Action'] = ACTION_NAME
@@ -105,14 +108,14 @@ def import_file(request):
 
                 # Action
                 try:
-                    isd.action = Action.objects.get(name=row['Action'])
+                    isd.action = Action.objects.get(name__icontains=row['Action'])
                 except Action.DoesNotExist:
                     isd.action = Action(name=row['Action'], creator=request.user)
                     isd.action.save()
 
                 # Practice
                 try:
-                    isd.practice = Practice.objects.get(name=row['Practice'])
+                    isd.practice = Practice.objects.get(name__icontains=row['Practice'])
                 except Practice.DoesNotExist:
                     isd.practice = Practice(name=row['Practice'], creator=request.user)
                     isd.practice.save()

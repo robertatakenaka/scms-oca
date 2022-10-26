@@ -35,7 +35,10 @@ class City(CommonControlField):
     def get_or_create(cls, user, name):
 
         if cls.objects.filter(name__exact=name).exists():
-            return cls.objects.get(name__exact=name)
+            try:
+                return cls.objects.get(name__exact=name)
+            except:
+                return cls.objects.filter(name__exact=name).first()
         else:
             city = City()
             city.name = name

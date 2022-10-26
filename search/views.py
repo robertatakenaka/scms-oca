@@ -1,3 +1,4 @@
+import json
 import datetime
 import math
 from collections import OrderedDict
@@ -7,6 +8,9 @@ from django.conf import settings
 from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import render
 from django.template import loader
+
+from indicator.models import Indicator
+
 
 solr = pysolr.Solr(settings.HAYSTACK_CONNECTIONS["default"]["URL"],
                    timeout=settings.HAYSTACK_CONNECTIONS["default"]["SOLR_TIMEOUT"])
@@ -91,3 +95,38 @@ def search(request):
         'total_pages': total_pages,
         'selectSortKey': sort_by
     })
+
+
+def indicator_detail(request, indicator_id):
+    try:
+        indicator = Indicator.objects.get(
+            pk=indicator_id, record_status='PUBLISHED')
+    except Indicator.DoesNotExist:
+        raise Http404("Indicator does not exist")
+
+    names = [item['name'] for item in indicator.computed['items']]
+    values = [item['count'] for item in indicator.computed['items']]
+
+    return render(request, 'indicator_detail.html', {
+        "object": indicator,
+        "names": str(names),
+        "values": str(values),
+    })
+
+
+def indicator_computed(request, indicator_id):
+    try:
+        indicator = Indicator.objects.get(
+            pk=indicator_id, record_status='PUBLISHED')
+    except Indicator.DoesNotExist:
+        raise Http404("Indicator does not exist")
+    return render(request, 'indicator_computed.html', {"object": indicator})
+
+
+def indicator_dataset(request, indicator_id):
+    try:
+        indicator = Indicator.objects.get(
+            pk=indicator_id, record_status='PUBLISHED')
+    except Indicator.DoesNotExist:
+        raise Http404("Indicator does not exist")
+    return render(request, 'indicator_dataset.html', {"object": indicator})

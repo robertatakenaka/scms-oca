@@ -8,6 +8,7 @@ from wagtail.contrib.modeladmin.options import (ModelAdmin, modeladmin_register,
 
 from .models import (Indicator,)
 
+
 class IndicatorDirectoryEditView(EditView):
 
     def form_valid(self, form):
@@ -36,29 +37,36 @@ class IndicatorAdmin(ModelAdmin):
     list_display = (
         'title',
         'record_status',
+        'validity',
+        'total',
         'updated',
     )
 
     list_filter = (
         'action',
+        'classification',
         'practice',
+        'record_status',
+        'validity',
+        'total',
+        'scope',
+        'measurement',
         )
 
     search_fields = (
         'title',
-        'description',
-        'versioning',
-        'action',
+        'action__name',
         'classification',
-        'practice',
-        'thematic_areas',
-        'institutions',
-        'locations',
-        'start_date',
-        'end_date',
-        'record_status',
-        'source',
+        'practice__name',
     )
 
 
 modeladmin_register(IndicatorAdmin)
+
+
+@hooks.register('register_admin_urls')
+def register_disclosure_url():
+    return [
+        path('indicator/',
+        include('indicator.urls', namespace='indicator')),
+    ]

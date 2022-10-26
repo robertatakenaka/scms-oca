@@ -77,6 +77,9 @@ def import_file(request):
             data = csv.DictReader(csvfile, delimiter=";")
 
             for line, row in enumerate(data):
+
+                for k, v in row.items():
+                    row[k] = v.strip()
                 # Action
                 if row['Action'] != ACTION_NAME and row['Action'] in ACTION_NAME:
                     row['Action'] = ACTION_NAME
@@ -105,14 +108,14 @@ def import_file(request):
 
                 # Action
                 try:
-                    ed.action = Action.objects.get(name=row['Action'])
+                    ed.action = Action.objects.get(name__icontains=row['Action'])
                 except Action.DoesNotExist:
                     ed.action = Action(name=row['Action'], creator=request.user)
                     ed.action.save()
 
                 # Practice
                 try:
-                    ed.practice = Practice.objects.get(name=row['Practice'])
+                    ed.practice = Practice.objects.get(name__icontains=row['Practice'])
                 except Practice.DoesNotExist:
                     ed.practice = Practice(name=row['Practice'], creator=request.user)
                     ed.practice.save()

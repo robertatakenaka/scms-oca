@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% load humanize %}
+{% load static %}
+{% load i18n %}
+{% load wagtailsettings_tags %}
+
+{% get_settings use_default_site=True %}
+
+{% block content %}
+<section id="content">
+  <div class="content-wrap pt-0">
+    <div class="container clearfix">
+      <div class="section m-1 p-1 mt-4">
+
+        <h1>{{ object.title }}</h1>
+        <div class="container">
+            <p>
+                <span class="badge badge-primary">{{ object.action }}</span>
+                <span class="badge badge-secondary">{{ object.classification }}</span>
+                <span class="badge badge-success">{{ object.practice }}</span>
+                <span class="badge badge-danger">{{ object.scope }}</span>
+                <span class="badge badge-warning">{{ object.measurement }}</span>
+            </p>
+        </div>
+        <div class="container">
+            <p>{% trans 'validity' %}: {{ object.validity }}</p>
+            <nav aria-label="...">
+                <ul class="pagination">
+                    
+                    <li class="page-item" aria-current="page">
+                        {% if object.previous_record.seq %}
+                            <a class="page-link" href="{% url 'search:indicator_detail' object.previous_record.id }">
+                                {{ object.previous_record.seq }}
+                            </a>
+                        {% endif %}
+                    </li>
+                    <li class="page-item active">
+                        {% if object.seq %}
+                        <a class="page-link" href="#">
+                            {{ object.seq }}
+                        </a>
+                        {% endif %}
+                    </li> 
+                    <li class="page-item">
+                        {% if object.posterior_record.seq %}
+                            <a class="page-link" href="{% url 'search:indicator_detail' object.previous_record.id }">
+                                {{ object.previous_record.seq }}
+                            </a>
+                        {% endif %}
+                    </li>
+                    
+                </ul>
+            </nav>
+        </div>
+        <div class="container">
+            <div>
+                <p>{{ object.description }}</p>
+            </div>
+            <div>
+                <p>{% trans 'Key words' %}:
+                    {% for item in object.keywords.all %}
+                        <span class="badge badge-info">{{ item.name }}</span>
+                    {% endfor %}
+                </p>
+            </div>
+        </div>
+        <div class="container">
+            <p class="text">Dataset: <a href="{% url 'search:indicator_dataset' object.id %}">dataset</a></p>
+        </div>
+        <div class="container">
+            <p class="text">computed: <a href="{% url 'search:indicator_computed' object.id %}">computed</a></p>
+            {% include 'indicator_graphic.html' %}
+        </div>
+    </div>
+  </div>
+</section>
+<!-- content -->
+{% endblock %}

@@ -1,0 +1,44 @@
+{% load static %}
+{% block content %}
+<script src="{% static 'js/echarts.js' %}"></script>
+<div>
+    <div id="graph1" style="width: 600px;height:400px;"></div>
+    <!-- https://echarts.apache.org/examples/en/editor.html?c=dataset-encode0 -->
+    <script type="text/javascript">
+        var myChart = echarts.init(document.getElementById('graph1'));
+        var option = {
+          dataset: {
+            source: {{ source | safe }}
+          },
+          grid: { containLabel: true },
+          xAxis: { name: 'count' },
+          yAxis: { type: 'category' },
+           visualMap: {
+            orient: 'horizontal',
+            left: 'center',
+            min: 10,
+            max: 100,
+            text: ['High Score', 'Low Score'],
+            // Map the score column to color
+            dimension: 0,
+            inRange: {
+              color: ['#65B581', '#FFCE34', '#FD665F']
+            }
+          },
+          series: [
+            {
+              type: 'bar',
+              encode: {
+                // Map the "count" column to X axis.
+                x: 'count',
+                // Map the "product" column to Y axis
+                y: 'product'
+              }
+            }
+          ]
+        };
+
+        myChart.setOption(option);
+    </script>
+</div>
+{% endblock %}

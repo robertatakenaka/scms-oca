@@ -9,6 +9,7 @@ from institution import models
 from location.models import Location
 from usefulmodels.models import Country, State
 
+
 def run(*args):
     user_id = 1
 
