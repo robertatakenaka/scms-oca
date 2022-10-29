@@ -1,3 +1,4 @@
+import logging
 from django.db.utils import DataError
 
 from scholarly_articles import models
@@ -147,6 +148,7 @@ def load(from_year, resource_type, is_paratext, user):
         is_paratext=is_paratext
     ).iterator()
     for item in rawunpaywall:
+        logging.info(item.doi)
         try:
             load_article(item.json)
         except (ArticleSaveError, JournalSaveError, ContributorSaveError, AffiliationSaveError) as e:

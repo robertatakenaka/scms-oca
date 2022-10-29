@@ -46,8 +46,8 @@ services:
     image: oca_local_postgres
     container_name: oca_local_postgres
     volumes:
-      - ../scms_data/data_dev:/var/lib/postgresql/data:Z
-      - ../scms_data/data_dev_backup:/backups:z
+      - ../_bases_ocabr/data_dev:/var/lib/postgresql/data:Z
+      - ../_bases_ocabr/data_dev_backup:/backups:z
     ports:
       - "5432:5432"
     env_file:

@@ -10,6 +10,7 @@ User = get_user_model()
 
 SEPARATOR = ';'
 
+
 def run(*args):
     user_id = 1
 

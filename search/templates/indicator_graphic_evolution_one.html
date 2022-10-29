@@ -1,0 +1,24 @@
+{% load static %}
+{% block content %}
+<script src="{% static 'js/echarts.js' %}"></script>
+<div>
+    <div id="graph1" style="width: 1200px;height:800px;"></div>
+    <!-- https://echarts.apache.org/examples/en/editor.html?c=dataset-encode0 -->
+    <script type="text/javascript">
+        var myChart = echarts.init(document.getElementById('graph1'));
+        option = {
+  legend: {},
+  tooltip: {},
+  dataset: {
+    source: {{ source | safe }}
+  },
+  xAxis: { type: 'category' },
+  yAxis: {},
+  grid: [{ bottom: '55%' }, { top: '55%' }],
+  series: {{ series | safe }}
+};
+
+        myChart.setOption(option);
+    </script>
+</div>
+{% endblock %}

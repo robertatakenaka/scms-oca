@@ -37,14 +37,14 @@ def validate(request):
                 os.path.dirname(os.path.abspath(__file__)) + "/chkcsvfmt.fmt", True, False)
             errorlist = chkcsv.check_csv_file(upload_path, cols, True, True, True, False)
             if errorlist:
-                raise Exception(_("Valication error"))
+                raise Exception(_("Validation error"))
             else:
                 file_upload.is_valid = True
                 fp = open(upload_path)
                 file_upload.line_count = len(fp.readlines())
                 file_upload.save()
         except Exception as ex:
-            messages.error(request, _("Valication error: %s") % errorlist)
+            messages.error(request, _("Validation error: %s") % errorlist)
         else:
             messages.success(request, _("File successfully validated!"))
 
@@ -69,12 +69,57 @@ def import_file(request):
 
     file_path = file_upload.attachment.file.path
 
+    ACTION_NAME = 'educação / capacitação'
+    # EducationDirectoryFile.objects.all().delete()
+
     try:
         with open(file_path, 'r') as csvfile:
             data = csv.DictReader(csvfile, delimiter=";")
 
             for line, row in enumerate(data):
-                ed = EducationDirectory()
+
+                for k, v in row.items():
+                    row[k] = v.strip()
+                # Action
+                if row['Action'] != ACTION_NAME and row['Action'] in ACTION_NAME:
+                    row['Action'] = ACTION_NAME
+
+                if row['Action'] != ACTION_NAME:
+                    messages.error(
+                        request,
+                        _("Importing %s | Invalid value in %s | line: %s | %s") %
+                        (ACTION_NAME, "Action", str(line + 2), row))
+                    continue
+
+                try:
+                    ed = EducationDirectory.objects.get(link=row['Link'], title=row['Title'])
+                except EducationDirectory.DoesNotExist:
+                    ed = EducationDirectory()
+                except EducationDirectory.MultipleObjectsReturned:
+                    try:
+                        EducationDirectory.objects.filter(link=row['Link'], title=row['Title']).delete()
+                        ed = EducationDirectory()
+                    except Exception as e:
+                        messages.error(
+                            request,
+                            _("Importing %s | Invalid value in %s | line: %s | %s") %
+                            (e, "row", str(line + 2), row))
+                        continue
+
+                # Action
+                try:
+                    ed.action = Action.objects.get(name__icontains=row['Action'])
+                except Action.DoesNotExist:
+                    ed.action = Action(name=row['Action'], creator=request.user)
+                    ed.action.save()
+
+                # Practice
+                try:
+                    ed.practice = Practice.objects.get(name__icontains=row['Practice'])
+                except Practice.DoesNotExist:
+                    ed.practice = Practice(name=row['Practice'], creator=request.user)
+                    ed.practice.save()
+
                 ed.title = row['Title']
                 ed.link = row['Link']
                 ed.description = row['Description']
@@ -115,20 +160,6 @@ def import_file(request):
 
                 if row['Classification']:
                     ed.classification = row['Classification']
-
-                # Practice
-                if row['Practice']:
-                    practice_name = row['Practice']
-                    if Practice.objects.filter(name=practice_name).exists():
-                        practice = Practice.objects.get(name=practice_name)
-                        ed.practice = practice
-                    else:
-                        messages.error(request, _("Unknown Practice, line: %s") % str(line + 2))
-
-                # Action = educação / capacitação"
-                if row['Action']:
-                    if Action.objects.filter(name__icontains="educação / capacitação").exists():
-                        ed.action = Action.objects.get(name__icontains="educação / capacitação")
 
                 if row['Source']:
                     ed.source = row['Source']

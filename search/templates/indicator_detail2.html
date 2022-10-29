@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% load humanize %}
+{% load static %}
+{% load i18n %}
+{% load wagtailsettings_tags %}
+
+{% get_settings use_default_site=True %}
+
+{% block title %}
+    {{ object.title }}
+{% endblock title %}
+
+{% block content %}
+<section id="content">
+  <div class="content-wrap pt-0">
+    <div class="container clearfix">
+      <div class="section m-1 p-1 mt-4">
+
+        <h1>{{ object.title }}</h1>
+        
+        <div class="container">
+                {% include 'indicator_evo.html' %}
+           
+        </div>
+    </div>
+  </div>
+</section>
+<!-- content -->
+{% endblock %}

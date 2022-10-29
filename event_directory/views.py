@@ -70,11 +70,57 @@ def import_file(request):
     file_path = file_upload.attachment.file.path
 
     # try:
+    ACTION_NAME = 'disseminação'
+    # EventDirectory.objects.all().delete()
+
     with open(file_path, 'r') as csvfile:
         data = csv.DictReader(csvfile, delimiter=";")
 
         for line, row in enumerate(data):
-            di = EventDirectory()
+
+            for k, v in row.items():
+                row[k] = v.strip()
+
+            # Action
+            if row['Action'] == 'eventos':
+                row['Action'] = ACTION_NAME
+
+            if row['Action'] != ACTION_NAME:
+                messages.error(
+                    request,
+                    _("Importing %s | Invalid value in %s | line: %s | %s") %
+                    (ACTION_NAME, "Action", str(line + 2), row))
+                continue
+
+            try:
+                di = EventDirectory.objects.get(link=row['Link'], title=row['Title'])
+            except EventDirectory.DoesNotExist:
+                di = EventDirectory()
+            except EventDirectory.MultipleObjectsReturned:
+                try:
+                    EventDirectory.objects.filter(link=row['Link'], title=row['Title']).delete()
+                    di = EventDirectory()
+                except Exception as e:
+                    messages.error(
+                        request,
+                        _("Importing %s | Invalid value in %s | line: %s | %s") %
+                        (e, "row", str(line + 2), row))
+                    continue
+
+            # Action
+            try:
+                di.action = Action.objects.get(name__icontains=row['Action'])
+            except Action.DoesNotExist:
+                di.action = Action(name=row['Action'], creator=request.user)
+                di.action.save()
+
+            # Practice
+            try:
+                di.practice = Practice.objects.get(name__icontains=row['Practice'])
+            except Practice.DoesNotExist:
+                di.practice = Practice(name=row['Practice'], creator=request.user)
+                di.practice.save()
+
             di.title = row['Title']
             di.link = row['Link']
             di.description = row['Description']
@@ -116,20 +162,6 @@ def import_file(request):
 
             if row['Classification']:
                 di.classification = row['Classification']
-
-            # Practice
-            if row['Practice']:
-                pratice_name = row['Practice']
-                if Practice.objects.filter(name=pratice_name).exists():
-                    practice = Practice.objects.get(name=pratice_name)
-                    di.practice = practice
-                else:
-                    messages.error(request, _("Unknown Practice, line: %s") % str(line + 2))
-
-            # Action
-            if row['Action']:
-                if Action.objects.filter(name__icontains="disseminação").exists():
-                    di.action = Action.objects.get(name__icontains="disseminação")
 
             if row['Source']:
                 di.source = row['Source']

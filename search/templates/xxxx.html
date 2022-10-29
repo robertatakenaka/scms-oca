@@ -1,0 +1,95 @@
+
+
+
+
+
+
+
+<!DOCTYPE html>
+<html dir="ltr" lang="en-US">
+
+  <head>
+
+      <meta http-equiv="content-type" content="text/html; charset=utf-8" />
+      <meta name="author" content="SemiColonWeb" />
+
+      
+
+        <link rel="stylesheet" href="/static/css/bootstrap.css" type="text/css" />
+        <link rel="stylesheet" href="/static/css/font-icons.css" type="text/css" />
+
+        <!-- banner de cookie -->
+        <!-- <link rel="stylesheet" href="/static/css/cookiealert.css"> -->
+
+        
+        
+
+        
+          <link href="/static/css/style.css" rel="stylesheet">
+          <link href="/static/css/custom.css" rel="stylesheet">
+          
+        
+
+      
+
+      <link href="https://fonts.googleapis.com/css?family=Lato:300,400,400i,700|Poppins:300,400,500,600,700|PT+Serif:400,400i&display=swap" rel="stylesheet" type="text/css" />
+
+      <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+      
+          <link href="/static/images/favicons/favicon-16x16.png" rel="shortcut icon" type="image/x-icon">
+          <link href="/static/images/favicons/apple-touch-icon.png" rel="apple-touch-icon">
+      
+
+      <title>
+    Evolução
+</title>
+
+      
+
+  </head>
+
+  <body>
+
+<script src="/static/js/echarts.js"></script>
+<div>
+    <div id="graph1" style="width: 1200px;height:800px;"></div>
+    <!-- https://echarts.apache.org/examples/en/editor.html?c=dataset-encode0 -->
+    <script type="text/javascript">
+        var myChart = echarts.init(document.getElementById('graph1'));
+        option = {
+  legend: {},
+  tooltip: {},
+  dataset: {
+    source: [
+      ['product', '2012', '2013', '2014', '2015'],
+      ['Matcha Latte', 41.1, 30.4, 65.1, 53.3],
+      ['Milk Tea', 86.5, 92.1, 85.7, 83.1],
+      ['Cheese Cocoa', 24.1, 67.2, 79.5, 86.4]
+    ]
+  },
+  xAxis: [
+    { type: 'category', gridIndex: 0 },
+    { type: 'category', gridIndex: 1 }
+  ],
+  yAxis: [{ gridIndex: 0 }, { gridIndex: 1 }],
+  grid: [{ bottom: '55%' }, { top: '55%' }],
+  series: [
+    // These series are in the first grid.
+    { type: 'bar', seriesLayoutBy: 'row' },
+    { type: 'bar', seriesLayoutBy: 'row' },
+    { type: 'bar', seriesLayoutBy: 'row' },
+    // These series are in the second grid.
+    { type: 'bar', xAxisIndex: 1, yAxisIndex: 1 },
+    { type: 'bar', xAxisIndex: 1, yAxisIndex: 1 },
+    { type: 'bar', xAxisIndex: 1, yAxisIndex: 1 },
+    { type: 'bar', xAxisIndex: 1, yAxisIndex: 1 }
+  ]
+};
+
+        myChart.setOption(option);
+    </script>
+</div>
+</body>
+</html>
+
