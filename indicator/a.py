@@ -1,0 +1,1 @@
+for country in Country.objects.all():

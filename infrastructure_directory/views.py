@@ -37,14 +37,14 @@ def validate(request):
                 os.path.dirname(os.path.abspath(__file__)) + "/chkcsvfmt.fmt", True, False)
             errorlist = chkcsv.check_csv_file(upload_path, cols, True, True, True, False)
             if errorlist:
-                raise Exception(_("Valication error"))
+                raise Exception(_("Validation error"))
             else:
                 file_upload.is_valid = True
                 fp = open(upload_path)
                 file_upload.line_count = len(fp.readlines())
                 file_upload.save()
         except Exception as ex:
-            messages.error(request, _("Valication error: %s") % errorlist)
+            messages.error(request, _("Validation error: %s") % errorlist)
         else:
             messages.success(request, _("File successfully validated!"))
 
@@ -69,12 +69,57 @@ def import_file(request):
 
     file_path = file_upload.attachment.file.path
 
+    ACTION_NAME = 'infraestrutura'
+
     try:
         with open(file_path, 'r') as csvfile:
             data = csv.DictReader(csvfile, delimiter=";")
 
             for line, row in enumerate(data):
-                isd = InfrastructureDirectory()
+
+                for k, v in row.items():
+                    row[k] = v.strip()
+
+                # Action
+                if row['Action'] != ACTION_NAME and row['Action'] in ACTION_NAME:
+                    row['Action'] = ACTION_NAME
+
+                if row['Action'] != ACTION_NAME:
+                    messages.error(
+                        request,
+                        _("Importing %s | Invalid value in %s | line: %s | %s") %
+                        (ACTION_NAME, "Action", str(line + 2), row))
+                    continue
+
+                try:
+                    isd = InfrastructureDirectory.objects.get(link=row['Link'], title=row['Title'])
+                except InfrastructureDirectory.DoesNotExist:
+                    isd = InfrastructureDirectory()
+                except InfrastructureDirectory.MultipleObjectsReturned:
+                    try:
+                        InfrastructureDirectory.objects.filter(link=row['Link'], title=row['Title']).delete()
+                        isd = InfrastructureDirectory()
+                    except Exception as e:
+                        messages.error(
+                            request,
+                            _("Importing %s | Invalid value in %s | line: %s | %s") %
+                            (e, "row", str(line + 2), row))
+                        continue
+
+                # Action
+                try:
+                    isd.action = Action.objects.get(name__icontains=row['Action'])
+                except Action.DoesNotExist:
+                    isd.action = Action(name=row['Action'], creator=request.user)
+                    isd.action.save()
+
+                # Practice
+                try:
+                    isd.practice = Practice.objects.get(name__icontains=row['Practice'])
+                except Practice.DoesNotExist:
+                    isd.practice = Practice(name=row['Practice'], creator=request.user)
+                    isd.practice.save()
+
                 isd.title = row['Title']
                 isd.link = row['Link']
                 isd.description = row['Description']
@@ -110,27 +155,10 @@ def import_file(request):
                 if row['Classification']:
                     isd.classification = row['Classification']
 
-                # Practice
-                if row['Practice']:
-                    practice_name = row['Practice']
-                    if Practice.objects.filter(name=practice_name).exists():
-                        pratice = Practice.objects.get(name=practice_name)
-                        isd.practice = pratice
-                    else:
-                        messages.error(request, _("Unknown Practice, line: %s") % str(line + 1))
-
-                # Action
-                if row['Action']:
-                    if Action.objects.filter(name__icontains="infraestrutura").exists():
-                        isd.action = Action.objects.get(name__icontains="infraestrutura")
-
                 if row['Source']:
                     isd.source = row['Source']
 
                 isd.save()
-
-                # Update de index.
-                InfraStructureIndex().update_object(instance=isd)
 
     except Exception as ex:
         messages.error(request, _("Import error: %s, Line: %s") % (ex, str(line + 2)))
