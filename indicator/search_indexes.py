@@ -10,6 +10,7 @@ class IndicatorIndex(indexes.SearchIndex, indexes.Indexable):
         text
     """
     created = indexes.CharField(model_attr="created", null=False)
+    validity = indexes.CharField(model_attr="validity", null=False)
 
     text = indexes.CharField(document=True, use_template=True)
     record_type = indexes.CharField(null=False)
@@ -23,7 +24,7 @@ class IndicatorIndex(indexes.SearchIndex, indexes.Indexable):
     source = indexes.CharField(model_attr="source", null=True)
     total = indexes.CharField(model_attr="total", null=True)
 
-    raw_data = indexes.CharField(null=True)
+    # raw_data = indexes.CharField(null=True)
 
     # ForeignKeys
     classification = indexes.CharField(null=True)
@@ -75,8 +76,8 @@ class IndicatorIndex(indexes.SearchIndex, indexes.Indexable):
             obj.scientific_production and
             obj.scientific_production.open_access_status)
 
-    def prepare_file_csv(self, obj):
-        return obj.raw_data and obj.raw_data.url
+    # def prepare_file_csv(self, obj):
+    #     return obj.raw_data and obj.raw_data.url
 
     def prepare_record_type(self, obj):
         return "indicator"

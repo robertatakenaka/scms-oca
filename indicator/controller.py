@@ -49,6 +49,44 @@ def qa():
             item.save()
 
 
+def delete():
+    for item in Indicator.objects.iterator():
+        try:
+            item.action_and_practice = None
+            if item.thematic_areas:
+                item.thematic_areas.clear()
+            if item.institutions:
+                item.institutions.clear()
+            if item.locations:
+                item.locations.clear()
+            item.delete()
+        except Exception as e:
+            print(e)
+
+
+def _add_optional_param(params, name, value):
+    if value:
+        params[name] = value
+    else:
+        params[f'{name}__isnull'] = True
+
+
+def _add_param_for_thematic_areas(params, thematic_areas):
+    _add_optional_param(params, "thematic_areas__level0", thematic_areas.level0)
+    _add_optional_param(params, "thematic_areas__level1", thematic_areas.level1)
+    _add_optional_param(params, "thematic_areas__level2", thematic_areas.level2)
+
+
+def _add_param_for_institutions(params, institutions):
+    _add_optional_param(params, "institutions__name", institutions.name)
+
+
+def _add_param_for_locations(params, locations):
+    _add_optional_param(params, "locations__city__name", locations.city__name)
+    _add_optional_param(params, "locations__state__acronym", locations.state__acronym)
+    _add_optional_param(params, "locations__country__acron2", locations.country__acron2)
+
+
 def create_record(
         title,
         action,
@@ -58,6 +96,11 @@ def create_record(
         measurement,
         creator_id,
         scientific_production=None,
+        thematic_areas=None,
+        institutions=None,
+        locations=None,
+        start_date_year=None,
+        end_date_year=None,
         ):
     """
     Cria uma nova instância de Indicator,
@@ -73,45 +116,35 @@ def create_record(
     measurement : choices.MEASUREMENT_TYPE
     """
     try:
-        if scientific_production:
-            previous = Indicator.objects.filter(
-                action_and_practice__action=action,
-                action_and_practice__practice=practice,
-                action_and_practice__classification=classification,
-                scope=scope,
-                measurement=measurement,
-                scientific_production=scientific_production,
-                posterior_record__isnull=True)[0]
+        params = dict(
+            scope=scope,
+            measurement=measurement,
+            posterior_record__isnull=True
+        )
+        if any([action, classification, practice]):
+            action_and_practice = ActionAndPractice.get_or_create(
+                action, classification, practice
+            )
         else:
-            logging.info(
-                dict(
-                    action_and_practice__action=action,
-                    action_and_practice__practice=practice,
-                    action_and_practice__classification=classification,
-                    scope=scope,
-                    measurement=measurement,
-                    scientific_production__isnull=True,
-                    posterior_record__isnull=True)
-                )
-            previous = Indicator.objects.filter(
-                action_and_practice__action=action,
-                action_and_practice__practice=practice,
-                action_and_practice__classification=classification,
-                scope=scope,
-                measurement=measurement,
-                scientific_production__isnull=True,
-                posterior_record__isnull=True)[0]
+            action_and_practice = None
+        _add_optional_param(params, 'action_and_practice', action_and_practice)
+        _add_optional_param(params, 'scientific_production', scientific_production)
+        _add_optional_param(params, 'start_date_year', start_date_year)
+        _add_optional_param(params, 'end_date_year', end_date_year)
+
+        _add_param_for_thematic_areas(params, thematic_areas)
+        _add_param_for_institutions(params, institutions)
+        _add_param_for_locations(params, locations)
+
+        previous = Indicator.objects.filter(**params)[0]
         seq = (previous.seq or 0) + 1
         previous.validity = choices.OUTDATED
     except Exception as e:
         seq = 1
         previous = None
 
-    action_and_practice = ActionAndPractice.get_or_create(
-        action, classification, practice
-    )
-    logging.info(action_and_practice)
     logging.info("Create Indicator")
+    logging.info(params)
     indicator = Indicator()
     indicator.seq = seq
     indicator.previous_record = previous
@@ -124,15 +157,13 @@ def create_record(
     indicator.record_status = choices.PUBLISHED
     indicator.creator_id = creator_id
     indicator.save()
-    logging.info("Saved 1")
+
     if previous:
         previous.posterior_record = indicator
         previous.save()
-        logging.info("Saved previous")
 
-    indicator.code = build_code(indicator)
+    #indicator.code = build_code(indicator)
     indicator.save()
-    logging.info("Saved 2")
     return indicator
 
 
@@ -157,84 +188,97 @@ def build_code(indicator):
     ]).lower()
 
 
-def number_of_action_classification_and_practice_by_state(
-        title,
-        action,
+##############################################################################
+def number_of_actions(
         creator_id,
         ):
-    """
-    Generate indicator according to the provided parameters
-
-    Parameters
-    ----------
-    title : str
-    action : Action
-
-    Returns
-    -------
-    Indicator
-
-    """
-    scope = choices.GEOGRAPHIC
+    title = "Número de ações em Ciência Aberta"
+    scope = choices.CHRONOLOGICAL
     measurement = choices.FREQUENCY
 
-    for result in get_numbers_of_action_classification_and_practice(
-            action, EducationDirectory,
-            get_locations_ranking, 'locations'):
-        register_indicator_of_action_classification_and_practice(
-            action=action,
-            scope=scope,
-            title=title,
-            data=result,
-            measurement=measurement,
-            creator_id=creator_id,
-            observation='location',
-            education_results=result['raw_data'],
-        )
-
-    for result in get_numbers_of_action_classification_and_practice(
-            action, EventDirectory,
-            get_locations_ranking, 'locations'):
-        register_indicator_of_action_classification_and_practice(
-            action=action,
-            scope=scope,
-            title=title,
-            data=result,
-            measurement=measurement,
-            creator_id=creator_id,
-            observation='location',
-            event_results=result['raw_data'],
-        )
-
-    for result in get_numbers_of_action_classification_and_practice(
-            action, InfrastructureDirectory,
-            get_locations_ranking, 'locations'):
-        register_indicator_of_action_classification_and_practice(
-            action=action,
-            scope=scope,
-            title=title,
-            data=result,
-            measurement=measurement,
-            creator_id=creator_id,
-            observation='location',
-            infrastructure_results=result['raw_data'],
-        )
-
-    for result in get_numbers_of_action_classification_and_practice(
-            action, PolicyDirectory,
-            get_locations_ranking, 'locations'):
-        register_indicator_of_action_classification_and_practice(
-            action=action,
-            scope=scope,
-            title=title,
-            data=result,
-            measurement=measurement,
-            creator_id=creator_id,
-            observation='location',
-            policy_results=result['raw_data'],
-        )
+    items = []
+    items.extend(_number_of_actions(EducationDirectory))
+    items.extend(_number_of_actions(EventDirectory))
+    items.extend(_number_of_actions(InfrastructureDirectory))
+    items.extend(_number_of_actions(PolicyDirectory))
+    indicator = create_record(
+        title=title,
+        action=None,
+        classification=None,
+        practice=None,
+        scope=scope,
+        measurement=measurement,
+        creator_id=creator_id,
+        # thematic_areas=thematic_areas,
+        # institutions=institutions,
+        # locations=locations,
+        # start_date_year=start_date_year,
+    )
+    indicator.computed = {
+        "items": list(_get_ranking_items(
+            items, ['action__name', 'classification']))
+    }
+    indicator.description = "geral"
+    indicator.total = len(items)
+    indicator.creator_id = creator_id
+    indicator.save()
 
 
+def number_of_actions_with_practice(
+        creator_id,
+        ):
+    title = "Número de práticas em Ciência Aberta"
+    scope = choices.CHRONOLOGICAL
+    measurement = choices.FREQUENCY
+
+    items = []
+    items.extend(_number_of_actions(EducationDirectory))
+    items.extend(_number_of_actions(EventDirectory))
+    items.extend(_number_of_actions(InfrastructureDirectory))
+    items.extend(_number_of_actions(PolicyDirectory))
+    indicator = create_record(
+        title=title,
+        action=None,
+        classification=None,
+        practice=None,
+        scope=scope,
+        measurement=measurement,
+        creator_id=creator_id,
+        # thematic_areas=thematic_areas,
+        # institutions=institutions,
+        # locations=locations,
+        # start_date_year=start_date_year,
+    )
+    indicator.computed = {
+        'items': list(items),
+        'cat1_name': 'practice__name',
+        'cat2_name': 'action__name',
+    }
+    indicator.description = "geral"
+    indicator.total = len(items)
+    indicator.creator_id = creator_id
+    indicator.save()
+
+
+def _number_of_actions(
+        model,
+        action__name=None,
+        ):
+    args = [
+        'action__name',
+        'classification',
+        'practice__name',
+    ]
+    if action__name:
+        args.append(action__name)
+    return model.objects.values(
+            *args
+        ).annotate(
+            count=Count('id')
+        ).order_by('count').iterator()
+
+
+##############################################################################
 def number_of_action_classification_and_practice_by_institution(
         title,
         action,
@@ -319,6 +363,184 @@ def number_of_action_classification_and_practice_by_institution(
             policy_results=result['raw_data'],
         )
 
+
+def _number_of_actions_by_institutions(
+        creator_id,
+        model,
+        action,
+        institution_name,
+        ):
+
+    dataset = model.objects.filter(action=action)
+
+    summarized = dataset.values(
+        'classification',
+        'practice__name',
+        institution_name,
+    ).annotate(
+        count=Count('id')
+    ).order_by('count').iterator()
+
+    scope = choices.INSTITUTIONAL
+    measurement = choices.FREQUENCY
+    observation = 'action'
+
+    title = "Número de {} por institutição".format(action.name)
+
+    indicator = create_record(
+        title=title,
+        action=action,
+        classification=None,
+        practice=None,
+        scope=scope,
+        measurement=measurement,
+        creator_id=creator_id,
+        # thematic_areas=thematic_areas,
+        # institutions=institutions,
+        # locations=locations,
+        start_date_year=years[0] if years else None,
+        end_date_year=years[-1] if years else None,
+    )
+
+    indicator.computed = {
+        "items": list(_get_ranking_items(
+            summarized, [institution_name]))
+    }
+    indicator.total = len(indicator.computed['items'])
+
+    indicator.creator_id = creator_id
+    indicator.save()
+
+
+###########################################################################
+
+
+def number_of_action_classification_and_practice_by_state(
+        title,
+        action,
+        creator_id,
+        ):
+    """
+    Generate indicator according to the provided parameters
+
+    Parameters
+    ----------
+    title : str
+    action : Action
+
+    Returns
+    -------
+    Indicator
+
+    """
+    scope = choices.GEOGRAPHIC
+    measurement = choices.FREQUENCY
+
+    for result in get_numbers_of_action_classification_and_practice(
+            action, EducationDirectory,
+            get_locations_ranking, 'locations'):
+        register_indicator_of_action_classification_and_practice(
+            action=action,
+            scope=scope,
+            title=title,
+            data=result,
+            measurement=measurement,
+            creator_id=creator_id,
+            observation='location',
+            education_results=result['raw_data'],
+        )
+
+    for result in get_numbers_of_action_classification_and_practice(
+            action, EventDirectory,
+            get_locations_ranking, 'locations'):
+        register_indicator_of_action_classification_and_practice(
+            action=action,
+            scope=scope,
+            title=title,
+            data=result,
+            measurement=measurement,
+            creator_id=creator_id,
+            observation='location',
+            event_results=result['raw_data'],
+        )
+
+    for result in get_numbers_of_action_classification_and_practice(
+            action, InfrastructureDirectory,
+            get_locations_ranking, 'locations'):
+        register_indicator_of_action_classification_and_practice(
+            action=action,
+            scope=scope,
+            title=title,
+            data=result,
+            measurement=measurement,
+            creator_id=creator_id,
+            observation='location',
+            infrastructure_results=result['raw_data'],
+        )
+
+    for result in get_numbers_of_action_classification_and_practice(
+            action, PolicyDirectory,
+            get_locations_ranking, 'locations'):
+        register_indicator_of_action_classification_and_practice(
+            action=action,
+            scope=scope,
+            title=title,
+            data=result,
+            measurement=measurement,
+            creator_id=creator_id,
+            observation='location',
+            policy_results=result['raw_data'],
+        )
+
+
+def _number_of_actions_by_locations(
+        creator_id,
+        model,
+        action,
+        location_name,
+        ):
+
+    dataset = model.objects.filter(action=action)
+
+    summarized = dataset.values(
+        'classification',
+        'practice__name',
+        location_name,
+    ).annotate(
+        count=Count('id')
+    ).order_by('count').iterator()
+
+    scope = choices.INSTITUTIONAL
+    measurement = choices.FREQUENCY
+    observation = 'action'
+
+    title = "Número de {} por institutição".format(action.name)
+
+    indicator = create_record(
+        title=title,
+        action=action,
+        classification=None,
+        practice=None,
+        scope=scope,
+        measurement=measurement,
+        creator_id=creator_id,
+        # thematic_areas=thematic_areas,
+        # institutions=institutions,
+        # locations=locations,
+        start_date_year=years[0] if years else None,
+        end_date_year=years[-1] if years else None,
+    )
+
+    indicator.computed = {
+        "items": list(_get_ranking_items(
+            summarized, [location_name]))
+    }
+    indicator.total = len(indicator.computed['items'])
+
+    indicator.creator_id = creator_id
+    indicator.save()
+
+##########################################################################
 
 def get_numbers_of_action_classification_and_practice(
         action, model, ranking_calculation,
@@ -464,9 +686,14 @@ def register_indicator_of_action_classification_and_practice(
         creator_id,
         observation,
         education_results=None,
-        infrastructure_results=None,
         event_results=None,
+        infrastructure_results=None,
         policy_results=None,
+        thematic_areas=None,
+        institutions=None,
+        locations=None,
+        start_date_year=None,
+        end_date_year=None,
         ):
 
     # cria uma instância de Indicator
@@ -486,6 +713,11 @@ def register_indicator_of_action_classification_and_practice(
         scope=scope,
         measurement=measurement,
         creator_id=creator_id,
+        thematic_areas=thematic_areas,
+        institutions=institutions,
+        locations=locations,
+        start_date_year=start_date_year,
+        end_date_year=end_date_year,
     )
 
     computed = generate_computed(action.name, observation, measurement, data)
@@ -552,14 +784,6 @@ def generate_computed(action, observation, measurement, data):
     return json
 
 
-def delete():
-    for item in Indicator.objects.all():
-        try:
-            item.delete()
-        except Exception as e:
-            print(e)
-
-
 def complete_affiliations_country():
     for aff in Affiliations.objects.filter(
             country__isnull=True, official__isnull=False).iterator():
@@ -567,7 +791,15 @@ def complete_affiliations_country():
         aff.save()
 
 
-def generate_scientific_production_institutions_ranking(creator_id):
+##########################################################################
+
+
+def scientific_production_institutions_ranking(
+        creator_id,
+        oa_status_items=None,
+        years=None,
+        BR_affiliations=False,
+        ):
 
     # identifica action, classification, practice
     action = Action.objects.get(name__icontains='produção')
@@ -579,127 +811,42 @@ def generate_scientific_production_institutions_ranking(creator_id):
     observation = 'journal-article'
 
     # seleciona produção científica brasileira e de acesso aberto
-    """
-    >>> City.objects.values('country__name') \
-          .annotate(country_population=Sum('population')) \
-          .order_by('-country_population')
-    [
-      {'country__name': u'China', 'country_population': 309898600},
-      {'country__name': u'United States', 'country_population': 102537091},
-      {'country__name': u'India', 'country_population': 100350602},
-      {'country__name': u'Japan', 'country_population': 65372000},
-      {'country__name': u'Brazil', 'country_population': 38676123},
-      '...(remaining elements truncated)...'
-    ]
-    """
     scope = choices.INSTITUTIONAL
     measurement = choices.FREQUENCY
 
-    for group in ScholarlyArticles.objects.filter(
-                open_access_status__in=['bronze', 'gold', 'hybrid', 'green'],
-            ).values(
-                'year',
-                'open_access_status',
-                'use_license',
-                'apc',
-            ).annotate(
-                count=Count('id'),
-            ).iterator():
-        if group['count']:
-
-            title = "Número de artigos de {} acesso aberto: {}, licença de uso: {}, APC: {} por afiliações não normalizadas".format(
-                group['year'],
-                group['open_access_status'],
-                group['use_license'],
-                group['apc'],
-            )
-
-            scientific_production = ScientificProduction.get_or_create(
-                communication_object='journal-article',
-                open_access_status=group['open_access_status'],
-                use_license=group['use_license'],
-                apc=group['apc'],
-            )
-
-            indicator = create_record(
-                title=title,
-                action=action,
-                classification=classification,
-                practice=practice,
-                scope=scope,
-                measurement=measurement,
-                creator_id=creator_id,
-                scientific_production=scientific_production,
-            )
-            indicator.start_date_year = int(group['year'])
-            indicator.total = group['count']
-
-            params = {}
-            for k, v in group.items():
-                if k == 'count':
-                    continue
-                if v:
-                    params[k] = v
-                else:
-                    params[f'{k}__isnull'] = True
-
-            results = []
-            for result in ScholarlyArticles.objects.filter(
-                        **params,
-                    ).values(
-                        'contributors__affiliation__name',
-                    ).annotate(
-                        count=Count('id'),
-                    ).order_by('count').iterator():
-                results.append({
-                    "count": result['count'],
-                    "name": result['contributors__affiliation__name'],
-                })
-
-            indicator.computed = {
-                "items": results
-            }
-
-            indicator.creator_id = creator_id
-            indicator.save()
-
-
-def generate_non_standard_affiliation_scientific_production_evolution(creator_id):
-
-    # identifica action, classification, practice
-    action = Action.objects.get(name__icontains='produção')
-    practice = Practice.objects.get(name='literatura em acesso aberto')
-    classification = "literatura científica"
-    action_and_practice = ActionAndPractice.get_or_create(
-        action, classification, practice)
-
-    scope = choices.CHRONOLOGICAL
-    measurement = choices.EVOLUTION
-    observation = 'journal-article'
-
-    oa_status_items = ('gold', 'bronze', 'green', 'hybrid', )
-    cats = ScholarlyArticles.objects.filter(
-            open_access_status__in=oa_status_items,
-            year__gte=str(datetime.now().year - 10),
-        ).values(
-            'open_access_status',
-            'use_license',
-        )
-
-    years = list(range(datetime.now().year - 10, datetime.now().year + 1))
-    # cats = []
-    # for oa_status in oa_status_items:
-    #     for use_license in use_licenses:
-    #         cats.append((oa_status, use_license))
+    years, years_as_str = _get_years_param_value(years)
+    oa_status_items, oa_status = _get_oa_status_param_value(oa_status_items)
 
     scientific_production = ScientificProduction.get_or_create(
         communication_object='journal-article',
-        open_access_status=None,
+        open_access_status=oa_status,
         use_license=None,
         apc=None,
     )
+
+    dataset = _get_dataset(oa_status_items, years_as_str, BR_affiliations)
+
+    args = []
+    if len(years) == 1:
+        args.append('year')
+        year = f" de {years[0]}"
+    else:
+        year = ""
+    if BR_affiliations:
+        name_keys = [
+            'contributors__affiliation__official__name',
+            'contributors__affiliation__official__location__state__acronym']
+    else:
+        name_keys = ['contributors__affiliation__name', ]
+    args.extend(name_keys)
+    logging.info(args)
+
+    title = "Número de artigos{} em acesso aberto{} por afiliação".format(
+        year, oa_status and f" {oa_status}" or '',
+    )
+
     indicator = create_record(
-        title='Evolução',
+        title=title,
         action=action,
         classification=classification,
         practice=practice,
@@ -707,109 +854,154 @@ def generate_non_standard_affiliation_scientific_production_evolution(creator_id
         measurement=measurement,
         creator_id=creator_id,
         scientific_production=scientific_production,
+        # thematic_areas=thematic_areas,
+        # institutions=institutions,
+        # locations=locations,
+        start_date_year=years[0] if years else None,
+        end_date_year=years[-1] if years else None,
     )
-    indicator.start_date_year = years[0]
-    indicator.end_date_year = years[-1]
-    data = {}
-    for group in ScholarlyArticles.objects.filter(
-                open_access_status__in=oa_status_items,
-                year__gte=str(datetime.now().year - 10),
-            ).values(
-                'year',
-                'open_access_status',
-                'use_license',
+
+    summarized = dataset.values(
+                *args
             ).annotate(
                 count=Count('id'),
-            ).iterator():
-        year = int(group['year'])
-        cat = (group['open_access_status'], group['use_license'] or '')
-        data[cat] = data.get(cat) or {}
-        data[cat][year] = group['count']
+            ).order_by('count').iterator()
 
-    categories = []
-    for name in sorted(data.keys()):
-        name_ = " ".join(name)
-        categories.append({
-            "name": name_,
-            "counts": [
-                (data.get(name) or {}).get(year) or 0
-                for year in years
-            ]
-        })
     indicator.computed = {
-        "years": [str(y) for y in years],
-        "categories": categories,
+        "items": list(_get_ranking_items(summarized, name_keys))
     }
-
+    indicator.total = len(indicator.computed['items'])
+    indicator.description = "" if oa_status_items else 'geral'
     indicator.creator_id = creator_id
     indicator.save()
 
 
-def generate_scientific_production(creator_id):
+def _get_ranking_items(items, name_keys):
+    for item in items:
+        logging.info(item)
+        if item['count']:
+            name = " | ".join([
+                item.get(k) or ''
+                for k in name_keys
+            ])
+            item.update(
+                {
+                    "name": name or '',
+                    "count": item['count'],
+                }
+            )
+            yield item
+
+
+def _get_dataset(oa_status_items, years_as_str, BR_affiliations=None):
+        # query
+    qs = dict(
+        open_access_status__in=oa_status_items,
+        year__in=years_as_str,
+    )
+    if BR_affiliations:
+        # adiciona filtro para selecionar BR
+        qs['contributors__affiliation__official__isnull'] = False
+        qs['contributors__affiliation__country__acron2'] = 'BR'
+
+    # obtém dataset
+    logging.info(qs)
+    return ScholarlyArticles.objects.filter(**qs)
+
+
+def _get_oa_status_param_value(oa_status_items):
+    oa_status_items = oa_status_items or (
+        'gold', 'bronze', 'green', 'hybrid', )
+    if len(oa_status_items) == 1:
+        oa_status = oa_status_items[0]
+    else:
+        oa_status = ""
+    return oa_status_items, oa_status
+
+
+def get_years_range(year_numbers):
+    return range(datetime.now().year - year_numbers, datetime.now().year + 1)
+
+
+def _get_years_param_value(years, year_numbers=10):
+    # default last 10 years
+    years = years or list(get_years_range(year_numbers))
+    years_as_str = [str(y) for y in years]
+    return years, years_as_str
+
+
+def generate_open_access_status_evolution(
+        creator_id,
+        years=None,
+        BR_affiliations=False,
+        oa_status_items=None,
+        ):
+    """
+
+    """
+    oa_status_items, oa_status = _get_oa_status_param_value(oa_status_items)
+    years, years_as_str = _get_years_param_value(years)
 
     # identifica action, classification, practice
     action = Action.objects.get(name__icontains='produção')
     practice = Practice.objects.get(name='literatura em acesso aberto')
     classification = "literatura científica"
-
     action_and_practice = ActionAndPractice.get_or_create(
         action, classification, practice)
+
+    # características do indicador
     scope = choices.CHRONOLOGICAL
-    measurement = choices.FREQUENCY
+    measurement = choices.EVOLUTION
     observation = 'journal-article'
 
-    # complete Affilition.country
-    complete_affiliations_country()
+    scientific_production = ScientificProduction.get_or_create(
+        communication_object='journal-article',
+        open_access_status=oa_status,
+        use_license=None,
+        apc=None,
+    )
 
-    # seleciona produção científica brasileira e de acesso aberto
-    for group in ScholarlyArticles.objects.filter(
-                contributors__affiliation__official__isnull=False,
-                open_access_status__ne='close',
-            ).values(
-                'year',
-                'open_access_status',
-                'use_license',
-                'apc',
-                'contributors__affiliation__official__id',
-                'contributors__affiliation__official__name',
-                'contributors__affiliation__official__location__state__acronym',
-            ).annotate(count=Count('id')).iterator():
-        if group['count']:
-            title = "Número de artigos de {} acesso aberto: {}, licença de uso: {}, APC: {}, afiliação: {}, {}, {}".format(
-                group['year'],
-                group['open_access_status'],
-                group['use_license'],
-                group['apc'],
-                group['contributors__affiliation__official__name'],
-                group['contributors__affiliation__official__location__state__acronym'],
-            )
-            scientific_production = ScientificProduction.get_or_create(
-                communication_object='journal-article',
-                open_access_status=group['open_access_status'],
-                use_license=group['use_license'],
-                apc=group['apc'],
-            )
-            indicator = create_record(
-                title=title,
-                action=action,
-                classification=classification,
-                practice=practice,
-                scope=scope,
-                measurement=measurement,
-                creator_id=creator_id,
-                scientific_production=scientific_production,
-            )
-            indicator.start_date_year = int(group['year'])
+    # obtém dataset
+    dataset = _get_dataset(oa_status_items, years_as_str, BR_affiliations)
 
-            indicator.institutions.add(
-                Institution.objects.get(pk=group['contributors__affiliation__official__id'])
-            )
-            indicator.total = group['count']
+    # argumentos para values()
+    values_args = ['year', 'open_access_status', ]
+    if oa_status:
+        CATEGORY = 'use_license'
+        values_args.append('use_license')
+    else:
+        CATEGORY = 'open_access_status'
 
-            # indicator.raw_data = save_raw_data(indicator)
-            # TODO atualizar link e source
-            # indicator.link = ''
-            # indicator.source = ''
+    indicator = create_record(
+        title='Evolução do número de artigos em acesso aberto{} {}-{}'.format(
+            oa_status and f" {oa_status}" or '', years[0], years[-1]),
+        action=action,
+        classification=classification,
+        practice=practice,
+        scope=scope,
+        measurement=measurement,
+        creator_id=creator_id,
+        scientific_production=scientific_production,
+        # thematic_areas=thematic_areas,
+        # institutions=institutions,
+        # locations=locations,
+        start_date_year=years[0] if years else None,
+        end_date_year=years[-1] if years else None,
+    )
+    indicator.start_date_year = years[0]
+    indicator.end_date_year = years[-1]
 
-            indicator.creator_id = creator_id
-            indicator.save()
+    items = dataset.values(
+                *values_args
+            ).annotate(
+                count=Count('id'),
+            ).iterator()
+    indicator.computed = {
+        'items': list(items),
+        'cat1_name': 'year',
+        'cat2_name': CATEGORY,
+        'cat1_values': years_as_str,
+    }
+    indicator.description = "" if oa_status_items else 'geral'
+    indicator.creator_id = creator_id
+    indicator.save()
