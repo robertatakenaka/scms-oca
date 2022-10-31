@@ -39,9 +39,58 @@ def generate_geographical_indicators():
             title, action, creator_id)
 
 
+def generate_open_access_status_evolution(creator_id):
+    controller.generate_open_access_status_evolution(
+        creator_id=creator_id,
+        years=None,
+        BR_affiliations=False,
+        oa_status_items=None,
+    )
+    for oa_status in ('gold', 'bronze', 'green', 'hybrid', ):
+        controller.generate_open_access_status_evolution(
+            creator_id=creator_id,
+            years=None,
+            BR_affiliations=False,
+            oa_status_items=[oa_status],
+        )
+
+
+def generate_scientific_production_ranking(creator_id):
+    # controller.scientific_production_institutions_ranking(
+    #     creator_id=creator_id,
+    #     oa_status_items=None,
+    #     years=None,
+    #     BR_affiliations=False,
+    # )
+    # for oa_status in ('gold', 'bronze', 'green', 'hybrid', ):
+    #     controller.scientific_production_institutions_ranking(
+    #         creator_id=creator_id,
+    #         oa_status_items=[oa_status],
+    #         years=None,
+    #         BR_affiliations=False,
+    #     )
+    for year in controller.get_years_range(10):
+        controller.scientific_production_institutions_ranking(
+            creator_id=creator_id,
+            oa_status_items=None,
+            years=[year],
+            BR_affiliations=False,
+        )
+        for oa_status in ('gold', 'bronze', 'green', 'hybrid', ):
+            controller.scientific_production_institutions_ranking(
+                creator_id=creator_id,
+                oa_status_items=[oa_status],
+                years=[year],
+                BR_affiliations=False,
+            )
+
+
 def run():
+    controller.delete()
+    controller.number_of_actions(1)
+    controller.number_of_actions_with_practice(1)
+    generate_open_access_status_evolution(1)
+
     # generate_institutions_indicators()
     # generate_geographical_indicators()
-    # controller.generate_scientific_production_institutions_ranking(1)
-    controller.generate_non_standard_affiliation_scientific_production_evolution(1)
-
+    generate_scientific_production_ranking(creator_id=1)

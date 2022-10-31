@@ -75,11 +75,17 @@
         <div class="container">
             <p class="text">Dataset: <a href="{% url 'search:indicator_dataset' object.id %}">dataset</a></p>
             <p class="text">computed: <a href="{% url 'search:indicator_computed' object.id %}">computed</a></p>
-            {% if object.measurement == 'FREQUENCY' %}
-                {% include 'indicator_graphic_frequency.html' %}
+            <div>
+            {% if graphic_type == 'bar-label-rotation' %}
+                {% include 'indicator/echarts/bar-label-rotation.html' %}
+            {% elif graphic_type == 'categories_1_grid' %}
+                {% include 'indicator/echarts/dataset-simple0.html' %}
+            {% elif graphic_type == 'categories_2_grids' %}
+                {% include 'indicator/echarts/dataset-series-layout-by.html' %}
             {% else %}
-                {% include 'indicator_graphic_evolution_one.html' %}
+                {% include 'indicator/echarts/dataset-encode0.html' %}
             {% endif %}
+            </div>
         </div>
     </div>
   </div>
