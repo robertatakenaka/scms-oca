@@ -20,6 +20,7 @@ from event_directory.choices import classification as event_choices
 from infrastructure_directory.choices import classification as infra_choices
 from policy_directory.choices import classification as policy_choices
 from scholarly_articles.models import ScholarlyArticles, Affiliations
+from scholarly_articles import controller as scholarly_articles_controller
 from location.models import Location
 from institution.models import Institution
 from usefulmodels.models import Practice, State, Action, Country
@@ -64,27 +65,45 @@ def delete():
             print(e)
 
 
-def _add_optional_param(params, name, value):
+def _add_param(params, name, value):
     if value:
         params[name] = value
     else:
         params[f'{name}__isnull'] = True
 
 
+def _add_param_for_action_and_practice(params, action_and_practice):
+    if action_and_practice:
+        _add_param(params, "action_and_practice__action", action_and_practice.action)
+        _add_param(params, "action_and_practice__classification", action_and_practice.classification)
+        _add_param(params, "action_and_practice__practice", action_and_practice.practice)
+    else:
+        _add_param(params, "action_and_practice", None)
+
+
 def _add_param_for_thematic_areas(params, thematic_areas):
-    _add_optional_param(params, "thematic_areas__level0", thematic_areas.level0)
-    _add_optional_param(params, "thematic_areas__level1", thematic_areas.level1)
-    _add_optional_param(params, "thematic_areas__level2", thematic_areas.level2)
+    if thematic_areas:
+        _add_param(params, "thematic_areas__level0", thematic_areas.level0)
+        _add_param(params, "thematic_areas__level1", thematic_areas.level1)
+        _add_param(params, "thematic_areas__level2", thematic_areas.level2)
+    else:
+        _add_param(params, "thematic_areas", None)
 
 
 def _add_param_for_institutions(params, institutions):
-    _add_optional_param(params, "institutions__name", institutions.name)
+    if institutions:
+        _add_param(params, "institutions__name", institutions.name)
+    else:
+        _add_param(params, "institutions", None)
 
 
 def _add_param_for_locations(params, locations):
-    _add_optional_param(params, "locations__city__name", locations.city__name)
-    _add_optional_param(params, "locations__state__acronym", locations.state__acronym)
-    _add_optional_param(params, "locations__country__acron2", locations.country__acron2)
+    if locations:
+        _add_param(params, "locations__city__name", locations.city__name)
+        _add_param(params, "locations__state__acronym", locations.state__acronym)
+        _add_param(params, "locations__country__acron2", locations.country__acron2)
+    else:
+        _add_param(params, "locations", None)
 
 
 def create_record(
@@ -115,31 +134,32 @@ def create_record(
     scope : choices.SCOPE
     measurement : choices.MEASUREMENT_TYPE
     """
-    try:
-        params = dict(
-            scope=scope,
-            measurement=measurement,
-            posterior_record__isnull=True
+    params = dict(
+        scope=scope,
+        measurement=measurement,
+        posterior_record__isnull=True
+    )
+    _add_param(params, 'scientific_production', scientific_production)
+    _add_param(params, 'start_date_year', start_date_year)
+    _add_param(params, 'end_date_year', end_date_year)
+
+    if any([action, classification, practice]):
+        action_and_practice = ActionAndPractice.get_or_create(
+            action, classification, practice
         )
-        if any([action, classification, practice]):
-            action_and_practice = ActionAndPractice.get_or_create(
-                action, classification, practice
-            )
-        else:
-            action_and_practice = None
-        _add_optional_param(params, 'action_and_practice', action_and_practice)
-        _add_optional_param(params, 'scientific_production', scientific_production)
-        _add_optional_param(params, 'start_date_year', start_date_year)
-        _add_optional_param(params, 'end_date_year', end_date_year)
-
-        _add_param_for_thematic_areas(params, thematic_areas)
-        _add_param_for_institutions(params, institutions)
-        _add_param_for_locations(params, locations)
-
+    else:
+        action_and_practice = None
+    #_add_param_for_action_and_practice(params, action_and_practice)
+    _add_param_for_thematic_areas(params, thematic_areas)
+    _add_param_for_institutions(params, institutions)
+    _add_param_for_locations(params, locations)
+    try:
+        logging.info(params)
         previous = Indicator.objects.filter(**params)[0]
         seq = (previous.seq or 0) + 1
         previous.validity = choices.OUTDATED
     except Exception as e:
+        logging.exception(e)
         seq = 1
         previous = None
 
@@ -154,6 +174,17 @@ def create_record(
     indicator.action_and_practice = action_and_practice
     indicator.scope = scope
     indicator.measurement = measurement
+    indicator.scientific_production = scientific_production
+    indicator.start_date_year = start_date_year
+    indicator.end_date_year = end_date_year
+    if institutions:
+        indicator.institutions.set(institutions)
+    if locations:
+        indicator.locations.set(locations)
+    if thematic_areas:
+        indicator.thematic_areas.set(thematic_areas)
+    if institutions:
+        indicator.institutions.set(institutions)
     indicator.record_status = choices.PUBLISHED
     indicator.creator_id = creator_id
     indicator.save()
@@ -228,6 +259,60 @@ def number_of_actions_with_practice(
         creator_id,
         ):
     title = "Número de práticas em Ciência Aberta"
+    scope = choices.CHRONOLOGICAL
+    measurement = choices.FREQUENCY
+
+    items = []
+    items.extend(_number_of_actions(EducationDirectory))
+    items.extend(_number_of_actions(EventDirectory))
+    items.extend(_number_of_actions(InfrastructureDirectory))
+    items.extend(_number_of_actions(PolicyDirectory))
+    indicator = create_record(
+        title=title,
+        action=None,
+        classification=None,
+        practice=None,
+        scope=scope,
+        measurement=measurement,
+        creator_id=creator_id,
+        # thematic_areas=thematic_areas,
+        # institutions=institutions,
+        # locations=locations,
+        # start_date_year=start_date_year,
+    )
+    indicator.computed = {
+        'items': list(items),
+        'cat1_name': 'practice__name',
+        'cat2_name': 'action__name',
+    }
+    indicator.description = "geral"
+    indicator.total = len(items)
+    indicator.creator_id = creator_id
+    indicator.save()
+
+
+def _number_of_actions(
+        model,
+        action__name=None,
+        ):
+    args = [
+        'action__name',
+        'classification',
+        'practice__name',
+    ]
+    if action__name:
+        args.append(action__name)
+    return model.objects.values(
+            *args
+        ).annotate(
+            count=Count('id')
+        ).order_by('count').iterator()
+
+
+def number_of_actions_by_location(
+        creator_id,
+        ):
+    title = "Número de ações em Ciência Aberta por "
     scope = choices.CHRONOLOGICAL
     measurement = choices.FREQUENCY
 
@@ -793,6 +878,123 @@ def complete_affiliations_country():
 
 ##########################################################################
 
+def number_of_journals(
+        creator_id,
+        oa_status_flag=False,
+        use_license_flag=False,
+        publisher_institution_type_flag=False,
+        thematic_areas_flag=False,
+        publisher_UF_flag=False,
+        ppgs_flag=False,
+        ):
+    summarized = scholarly_articles_controller.number_journals(
+        oa_status_flag,
+        use_license_flag,
+        publisher_institution_type_flag,
+        thematic_areas_flag,
+        publisher_UF_flag,
+        ppgs_flag,
+    )
+    # identifica action, classification, practice
+    action = Action.objects.get(name__icontains='produção')
+    practice = Practice.objects.get(name='literatura em acesso aberto')
+    classification = "literatura científica"
+
+    action_and_practice = ActionAndPractice.get_or_create(
+        action, classification, practice)
+    observation = 'journal'
+
+    # seleciona produção científica brasileira e de acesso aberto
+    # scope = choices.INSTITUTIONAL
+    # measurement = choices.FREQUENCY
+
+    scientific_production = ScientificProduction.get_or_create(
+        communication_object='journal',
+        open_access_status=None,
+        use_license=None,
+        apc=None,
+    )
+
+    if thematic_areas_flag and ppgs_flag:
+        # TODO
+        raise NotImplementedError(
+            "Number of journals by thematic_areas and ppgs")
+    elif thematic_areas_flag and publisher_institution_type_flag:
+        # TODO
+        raise NotImplementedError(
+            "Number of journals by thematic_areas and publishers")
+    elif oa_status_flag:
+        _title = "tipo de Acesso Aberto"
+        scope = "GERAL"
+        measurements = [choices.FREQUENCY]
+        name_keys = ['open_access_status']
+
+    elif use_license_flag:
+        _title = "licença de uso"
+        scope = "GERAL"
+        measurements = [choices.FREQUENCY]
+        name_keys = ['use_license']
+
+    elif publisher_institution_type_flag:
+        _title = "tipo de instituição publicadora"
+        scope = choices.INSTITUTIONAL
+        measurements = [choices.FREQUENCY]
+        name_keys = ['publisher__institution_type']
+
+    elif thematic_areas_flag:
+        _title = "áreas temáticas"
+        scope = choices.THEMATIC
+        measurements = [choices.FREQUENCY]
+        name_keys = [
+            'thematic_areas__level0',
+            'thematic_areas__level1',
+            'thematic_areas__level2',
+        ]
+
+    elif publisher_UF_flag:
+        _title = "UF"
+        scope = choices.GEOGRAPHIC
+        measurements = [choices.FREQUENCY]
+        name_keys = ['publisher__location__state__acronym']
+
+    elif ppgs_flag:
+        _title = "PPGs"
+        scope = choices.INSTITUTIONAL
+        measurements = [choices.FREQUENCY]
+        name_keys = [
+            'contributors__affiliation__official__name',
+            'contributors__affiliation__official__level_1',
+            'contributors__affiliation__official__level_2',
+            'contributors__affiliation__official__level_3',
+            'contributors__affiliation__official__location__city__name',
+            'contributors__affiliation__official__location__state__acronym',
+        ]
+
+    title = "Número de periódicos em acesso aberto por {}".format(
+        _title,
+    )
+    for measurement in measurements:
+        indicator = create_record(
+            title=title,
+            action=action,
+            classification=classification,
+            practice=practice,
+            scope=scope,
+            measurement=measurement,
+            creator_id=creator_id,
+            scientific_production=scientific_production,
+            # thematic_areas=thematic_areas,
+            # institutions=institutions,
+            # locations=locations,
+            start_date_year=datetime.now().year,
+        )
+        indicator.computed = {
+            "items": list(_get_ranking_items(summarized, name_keys))
+        }
+        indicator.total = len(indicator.computed['items'])
+        indicator.creator_id = creator_id
+        indicator.save()
+
 
 def scientific_production_institutions_ranking(
         creator_id,
@@ -841,7 +1043,7 @@ def scientific_production_institutions_ranking(
     args.extend(name_keys)
     logging.info(args)
 
-    title = "Número de artigos{} em acesso aberto{} por afiliação".format(
+    title = "Número de artigos{} em acesso aberto{} por instituição".format(
         year, oa_status and f" {oa_status}" or '',
     )
 

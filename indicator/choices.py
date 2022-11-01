@@ -90,7 +90,7 @@ SCOPE = (
 )
 
 FREQUENCY = 'FREQUENCY'
-PERCENTUAL = 'PERCENTUAL'
+RELATIVE_FREQUENCY = 'RELATIVE_FREQUENCY'
 EVOLUTION = 'EVOLUTION'
 AVERAGE = 'AVERAGE'
 
@@ -99,5 +99,5 @@ MEASUREMENT_TYPE = (
     (FREQUENCY, _('Frequência')),
     (EVOLUTION, _('Evolução')),
     (AVERAGE, _('Média')),
-    (PERCENTUAL, _('Percentual')),
+    (RELATIVE_FREQUENCY, _('Frequência relativa')),
 )

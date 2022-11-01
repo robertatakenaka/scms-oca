@@ -85,12 +85,34 @@ def generate_scientific_production_ranking(creator_id):
             )
 
 
-def run():
-    controller.delete()
-    controller.number_of_actions(1)
-    controller.number_of_actions_with_practice(1)
-    generate_open_access_status_evolution(1)
+def number_of_journals(creator_id):
+    controller.number_of_journals(
+        creator_id,
+        oa_status_flag=True,
+        use_license_flag=False,
+        publisher_institution_type_flag=False,
+        thematic_areas_flag=False,
+        publisher_UF_flag=False,
+        ppgs_flag=False,
+    )
+    controller.number_of_journals(
+        creator_id,
+        oa_status_flag=False,
+        use_license_flag=True,
+        publisher_institution_type_flag=False,
+        thematic_areas_flag=False,
+        publisher_UF_flag=False,
+        ppgs_flag=False,
+    )
 
-    # generate_institutions_indicators()
-    # generate_geographical_indicators()
-    generate_scientific_production_ranking(creator_id=1)
+
+def run():
+    # controller.delete()
+    # controller.number_of_actions(1)
+    # controller.number_of_actions_with_practice(1)
+    # generate_open_access_status_evolution(1)
+
+    # # generate_institutions_indicators()
+    # # generate_geographical_indicators()
+    # generate_scientific_production_ranking(creator_id=1)
+    number_of_journals(creator_id=1)
