@@ -153,6 +153,8 @@ class Affiliations(models.Model):
     class Meta:
         indexes = [
             models.Index(fields=['name', ]),
+            models.Index(fields=['official', ]),
+            models.Index(fields=['country', ]),
         ]
 
     panels = [

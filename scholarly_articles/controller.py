@@ -8,25 +8,20 @@ from .models import ScholarlyArticles, Journals, Affiliations
 User = get_user_model()
 
 
-def affiliations_numbers(
-        official_flag=False,
-        country_flag=False,
-        location_city=False,
-        location_state=False,
-        ):
+def affiliations_numbers():
     stats = {}
     stats['total'] = Affiliations.objects.count()
     official = Affiliations.objects.filter(
         official__isnull=False,
     )
     official__country = official.filter(
-        location__country__isnull=False)
+        official__location__country__isnull=False)
     official__state = official.filter(
-        location__state__isnull=False)
+        official__location__state__isnull=False)
     official__city = official.filter(
-        location__city__isnull=False)
+        official__location__city__isnull=False)
     official__country__BR = official.filter(
-        location__country__acron2='BR')
+        official__location__country__acron2='BR')
 
     stats['official'] = official.count()
     stats['official__city'] = official__city.count()
