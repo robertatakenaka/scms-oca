@@ -80,9 +80,9 @@ INSTITUTIONAL = 'INSTITUTIONAL'
 THEMATIC = 'THEMATIC'
 GEOGRAPHIC = 'GEOGRAPHIC'
 CHRONOLOGICAL = 'CHRONOLOGICAL'
-
+GENERAL = 'GENERAL'
 SCOPE = (
-    ('', ''),
+    (GENERAL, _('Geral')),
     (INSTITUTIONAL, _('Instituticional')),
     (GEOGRAPHIC, _('Geográfico')),
     (CHRONOLOGICAL, _('Cronológico')),

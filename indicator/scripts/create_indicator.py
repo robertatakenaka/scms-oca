@@ -2,117 +2,189 @@ from indicator import controller
 from institution.models import Institution
 from usefulmodels.models import Action
 
-# def run():
-#     for institution in Institution.objects.all():
 
-#     indicator = controller.generate_indicator(
-#         institution="Universidade de São Paulo",
-#         practice="literatura em acesso aberto",
-#         action=None,
-#         classification=None,
-#         thematic_area=None,
-#         start_date=None,
-#         end_date=None,
-#         location=None,
-#         return_data=True,
-#         return_rows=True,
-#     )
+PARAMETERS = {
+    'OPEN_ACCESS_STATUS': {
+        'title': 'tipo',
+        'name': 'open_access_status',
+        'category_attributes': ['open_access_status']},
+    'USE_LICENSE': {
+        'title': 'licença de uso',
+        'name': 'use_license',
+        'category_attributes': ['use_license']},
+    'AFFILIATION_UF': {
+        'title': 'UF',
+        'name': 'contributors__affiliation__official__location__state__acronym',
+        'category_attributes': [
+            'contributors__affiliation__official__location__state__acronym']},
+    'AFFILIATION': {
+        'title': 'instituição',
+        'name': 'institution',
+        'category_attributes': [
+            'contributors__affiliation__official__name',
+            'contributors__affiliation__official__level_1',
+            'contributors__affiliation__official__level_2',
+            'contributors__affiliation__official__level_3',
+            'contributors__affiliation__official__location__city__name',
+            'contributors__affiliation__official__location__state__acronym']},
+    'THEMATIC_AREA': {
+        'name': 'área temática',
+        'category_attributes': [
+            'thematic_areas__level0',
+            'thematic_areas__level1',
+            'thematic_areas__level2']},
+    'PUBLISHER_UF': {
+        'title': 'instituição',
+        'name': 'institution',
+        'name': 'UF',
+        'category_attributes': ['publisher__location__state__acronym']},
+    'PUBLISHER': {
+        'title': 'instituição',
+        'name': 'institution',
+        'category_attributes': [
+            'publisher__name',
+            'publisher__level_1',
+            'publisher__level_2',
+            'publisher__level_3',
+            'publisher__location__city__name',
+            'publisher__location__state__acronym']},
+    'INSTITUTION': {
+        'title': 'instituição',
+        'name': 'institution',
+        'category_attributes': [
+            'institutions__name',
+            'institutions__level_1',
+            'institutions__level_2',
+            'institutions__level_3',
+            'institutions__location__city__name',
+            'institutions__location__state__acronym']},
+    'ORGANIZATION': {
+        'title': 'instituição',
+        'name': 'institution',
+        'category_attributes': [
+            'organization__name',
+            'organization__level_1',
+            'organization__level_2',
+            'organization__level_3',
+            'organization__location__city__name',
+            'organization__location__state__acronym']},
+}
 
-#     indicator.creator_id = 1
-#     indicator.save()
 
-
-def generate_institutions_indicators():
-    creator_id = 1
-    for action in Action.objects.all():
-        print(action)
-        title = "Número de [LABEL] por instituição"
-        controller.number_of_action_classification_and_practice_by_institution(
-            title, action, creator_id)
-
-
-def generate_geographical_indicators():
-    creator_id = 1
-    for action in Action.objects.all():
-        title = "Número de [LABEL] por estado"
-        controller.number_of_action_classification_and_practice_by_state(
-            title, action, creator_id)
-
-
-def generate_open_access_status_evolution(creator_id):
-    controller.generate_open_access_status_evolution(
-        creator_id=creator_id,
-        years=None,
-        BR_affiliations=False,
-        oa_status_items=None,
-    )
-    for oa_status in ('gold', 'bronze', 'green', 'hybrid', ):
-        controller.generate_open_access_status_evolution(
+def evolution_of_scientific_production(creator_id, years_number=5):
+    # OK
+    parameters = [
+        'OPEN_ACCESS_STATUS',
+        'USE_LICENSE',
+        # 'THEMATIC_AREA',
+    ]
+    for param_name in parameters:
+        controller.evolution_of_scientific_production(
             creator_id=creator_id,
-            years=None,
-            BR_affiliations=False,
-            oa_status_items=[oa_status],
+            category_title=PARAMETERS[param_name]['title'],
+            category_name=PARAMETERS[param_name]['name'],
+            category_attributes=PARAMETERS[param_name]['category_attributes'],
+            years_range=controller.get_years_range(years_number),
+        )
+
+    # FIXME
+    parameters = [
+        'AFFILIATION_UF',
+        'AFFILIATION',
+        # 'THEMATIC_AREA',
+    ]
+    for param_name in parameters:
+        controller.evolution_of_scientific_production_for_larger_groups(
+            creator_id=creator_id,
+            category_title=PARAMETERS[param_name]['title'],
+            category_name=PARAMETERS[param_name]['name'],
+            category_attributes=PARAMETERS[param_name]['category_attributes'],
+            years_range=controller.get_years_range(years_number),
         )
 
 
-def generate_scientific_production_ranking(creator_id):
-    # controller.scientific_production_institutions_ranking(
-    #     creator_id=creator_id,
-    #     oa_status_items=None,
-    #     years=None,
-    #     BR_affiliations=False,
+def journals_numbers(creator_id):
+    # OK
+    parameters = [
+        'OPEN_ACCESS_STATUS',
+        'USE_LICENSE',
+        # 'PUBLISHER_UF',
+        # 'PUBLISHER',
+        # 'THEMATIC_AREA',
+    ]
+    for param_name in parameters:
+        controller.journals_numbers(
+            creator_id=creator_id,
+            category_title=PARAMETERS[param_name]['title'],
+            category_attributes=PARAMETERS[param_name]['category_attributes'],
+        )
+
+
+def actions_numbers(creator_id):
+    # OK
+    controller.actions_numbers(
+        creator_id,
+        category_title='',
+        category_name='action',
+        category_attributes=['action__name', 'classification'],
+        category2_name=None,
+        category2_attributes=None
+    )
+    # FIXME
+    controller.actions_numbers(
+        creator_id,
+        category_title=" por prática",
+        category_attributes=["practice__name"],
+        category_name="practice__name",
+        category2_name="action",
+        category2_attributes=["action__name", "classification"]
+    )
+    # FIXME
+    controller.actions_numbers(
+        creator_id,
+        category_title=" por área temática",
+        category_attributes=[
+            "thematic_areas__level0",
+            "thematic_areas__level1",
+            "thematic_areas__level2"],
+        category_name="thematic_areas",
+        category2_name="action__name",
+        category2_attributes=["action__name", "classification"]
+    )
+    # controller.actions_numbers(
+    #     creator_id,
+    #     category_title=" por instituição",
+    #     category_name='action__name',
+    #     category_attributes=['action__name'] + [
+    #         'institutions__name',
+    #         'institutions__level_1',
+    #         'institutions__level_2',
+    #         'institutions__level_3',
+    #         'institutions__location__city__name',
+    #         'institutions__location__state__acronym'
+    #     ] + [
+    #         'organization__name',
+    #         'organization__level_1',
+    #         'organization__level_2',
+    #         'organization__level_3',
+    #         'organization__location__city__name',
+    #         'organization__location__state__acronym'
+    #     ]
     # )
-    # for oa_status in ('gold', 'bronze', 'green', 'hybrid', ):
-    #     controller.scientific_production_institutions_ranking(
-    #         creator_id=creator_id,
-    #         oa_status_items=[oa_status],
-    #         years=None,
-    #         BR_affiliations=False,
-    #     )
-    for year in controller.get_years_range(10):
-        controller.scientific_production_institutions_ranking(
-            creator_id=creator_id,
-            oa_status_items=None,
-            years=[year],
-            BR_affiliations=False,
-        )
-        for oa_status in ('gold', 'bronze', 'green', 'hybrid', ):
-            controller.scientific_production_institutions_ranking(
-                creator_id=creator_id,
-                oa_status_items=[oa_status],
-                years=[year],
-                BR_affiliations=False,
-            )
-
-
-def number_of_journals(creator_id):
-    controller.number_of_journals(
-        creator_id,
-        oa_status_flag=True,
-        use_license_flag=False,
-        publisher_institution_type_flag=False,
-        thematic_areas_flag=False,
-        publisher_UF_flag=False,
-        ppgs_flag=False,
-    )
-    controller.number_of_journals(
-        creator_id,
-        oa_status_flag=False,
-        use_license_flag=True,
-        publisher_institution_type_flag=False,
-        thematic_areas_flag=False,
-        publisher_UF_flag=False,
-        ppgs_flag=False,
-    )
+    # controller.actions_numbers(
+    #     creator_id,
+    #     category_title=" por UF",
+    #     category_name='action__name',
+    #     category_attributes=['action__name'] + [
+    #         'institutions__location__state__acronym'
+    #     ] + [
+    #         'organization__location__state__acronym'
+    #     ]
+    # )
 
 
 def run():
-    # controller.delete()
-    # controller.number_of_actions(1)
-    # controller.number_of_actions_with_practice(1)
-    # generate_open_access_status_evolution(1)
-
-    # # generate_institutions_indicators()
-    # # generate_geographical_indicators()
-    # generate_scientific_production_ranking(creator_id=1)
-    number_of_journals(creator_id=1)
+    controller.delete()
+    evolution_of_scientific_production(1)
+    journals_numbers(creator_id=1)
+    actions_numbers(1)
