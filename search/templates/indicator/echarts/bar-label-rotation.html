@@ -2,7 +2,7 @@
 {% block content %}
 <script src="{% static 'js/echarts.js' %}"></script>
 <div>
-    <div id="main" style="width: 1200px;height:800px;"></div>
+    <div id="main" style="width: 1200px;height:2400px;"></div>
     <!-- https://echarts.apache.org/examples/en/editor.html?c=bar-label-rotation -->
     <script type="text/javascript">
 // import * as echarts from 'echarts';
@@ -114,7 +114,7 @@ option = {
     }
   },
   grid: { containLabel: true },
-  xAxis: [
+  yAxis: [
     {
       type: 'category',
       axisTick: { show: false },
@@ -126,7 +126,7 @@ option = {
 
     }
   ],
-  yAxis: [
+  xAxis: [
     {
       type: 'value',
 

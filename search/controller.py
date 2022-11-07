@@ -10,54 +10,68 @@ from indicator import controller as indicator_controller
 
 def indicator_detail(request, indicator):
     layouts = ["bar-label-rotation", "categories_1_grid", "categories_2_grids"]
+    graphic_type = layouts[int(request.GET.get('g') or 1)]
     try:
-        cat1_name = indicator.computed['cat1_name']
-        data = _get_matrix(indicator.computed)
-        graphic_type = layouts[int(request.GET.get('g') or 2)]
-        if graphic_type == "bar-label-rotation":
-            label_options = _get_series(
-                _get_texts_label_labelOption(len(data['cat2_values'])))
-            cat2_name_and_values_list = _name_and_values_by_category(**data)
-            cat2_data = _get_cat2_text(cat2_name_and_values_list)
-            params = {
-                "label_options": label_options,
-                "cat2_values": data['cat2_values'],
-                "cat1_values": data['cat1_values'],
-                "cat2_data": cat2_data,
-            }
-        else:
-            rows = _format_data_as_table(cat1_name, **data)
-            if graphic_type == "categories_1_grid":
-                texts = _get_texts_for_1_grid(len(data['cat1_values']))
-            else:
-                texts = _get_texts_for_2_grids(
-                    len(data['cat1_values']), len(data['cat2_values']))
-            series = _get_series(texts)
-            params = {
-                "source": str(rows),
-                "series": series,
-            }
-        params.update({
-            "graphic_type": graphic_type,
-            "object": indicator,
-        })
-        return params
+        cat2_name = indicator.summarized['cat2_name']
     except KeyError:
+        return _parameters_for_ranking_indicator(indicator, graphic_type)
+    else:
+        return _parameters_for_categories_indicator(
+            indicator, graphic_type, cat2_name)
+
+
+def _parameters_for_ranking_indicator(indicator, graphic_type):
         names = []
         values = []
-        for item in indicator.computed['items']:
+        for item in indicator.summarized['items']:
             value = item.get('count') or item.get("value")
-            if item['name'] and value:
-                names.append(item['name'])
+            name = item.get("name")
+            if name and value:
+                names.append(name)
                 values.append(value)
         graphic_height = min([len(names) * 10, 30000])
         return {
             "graphic_type": "",
             "object": indicator,
+            "table_header": list(indicator.summarized['items'][0].keys()),
             "names": str(names),
             "values": str(values),
             "graphic_height": graphic_height if graphic_height > 400 else 800,
         }
+
+
+def _parameters_for_categories_indicator(indicator, graphic_type, cat1_name):
+    data = _get_matrix(indicator.summarized)
+    if graphic_type == "bar-label-rotation":
+        label_options = _get_series(
+            _get_texts_label_labelOption(len(data['cat2_values'])))
+        cat2_name_and_values_list = _name_and_values_by_category(**data)
+        cat2_data = _get_cat2_text(cat2_name_and_values_list)
+        params = {
+            "label_options": label_options,
+            "cat2_values": data['cat2_values'],
+            "cat1_values": data['cat1_values'],
+            "cat2_data": cat2_data,
+        }
+    else:
+        rows = _format_data_as_table(cat1_name, **data)
+        if graphic_type == "categories_1_grid":
+            rows = _format_data_as_table("year", **data)
+            texts = _get_texts_for_1_grid(len(data['cat2_values']))
+        else:
+            texts = _get_texts_for_2_grids(
+                len(data['cat1_values']), len(data['cat2_values']))
+        series = _get_series(texts)
+        params = {
+            "source": str(rows),
+            "series": series,
+        }
+    params.update({
+        "graphic_type": graphic_type,
+        "object": indicator,
+        "table_header": list(indicator.summarized['items'][0].keys()),
+    })
+    return params
 
 
 def _get_matrix(summarized):
@@ -159,4 +173,3 @@ def _get_cat2_text(cat2_name_and_values_list):
             text % (name, str(values))
         )
     return f"[{', '.join(items)}]"
-

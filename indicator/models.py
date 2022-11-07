@@ -1,3 +1,12 @@
+import os
+from zipfile import ZipFile
+from datetime import datetime
+import logging
+import csv
+import io
+import json
+
+from django.conf import settings
 from django.db import models
 from django.utils.translation import gettext as _
 from taggit.managers import TaggableManager
@@ -94,8 +103,8 @@ class Indicator(CommonControlField):
     end_date_year = models.IntegerField(_("End Date"), null=True, blank=True)
 
     link = models.URLField(_("Link"), null=True, blank=True)
-    raw_data = models.FileField(_("CSV File"), null=True, blank=True)
-    computed = models.JSONField(_("JSON File"), null=True, blank=True)
+    raw_data = models.FileField(_("JSONL Zip File"), null=True, blank=True, max_length=255)
+    summarized = models.JSONField(_("JSON File"), null=True, blank=True)
     total = models.IntegerField(_("Observations number"), null=True, default=None)
 
     keywords = TaggableManager(_("Keywords"), blank=True)
@@ -111,6 +120,23 @@ class Indicator(CommonControlField):
         'ScientificProduction', on_delete=models.SET_NULL,
         null=True, blank=False,
     )
+
+    def save_raw_data(self, items):
+        file_path = os.path.join(settings.MEDIA_ROOT, self.filename + ".zip")
+        with ZipFile(file_path, "w") as zf:
+            zf.writestr(
+                self.filename + ".jsonl",
+                "".join(self._raw_data_rows(items)))
+        self.raw_data.name = file_path
+        self.save()
+
+    def _raw_data_rows(self, items):
+        for item in items:
+            try:
+                data = item.data
+            except:
+                data = {"teste": "teste"}
+            yield f"{json.dumps(data)}\n"
 
     class Meta:
         indexes = [
@@ -153,5 +179,15 @@ class Indicator(CommonControlField):
 
     def __str__(self):
         return f"{self.action_and_practice} {self.scientific_production or ''} {self.measurement} {self.scope} {self.seq} {self.created}"
+
+    @property
+    def filename(self):
+        name = "".join([c if c.isalnum() else '_' for c in self.title])
+        items = name.lower().split() + [
+            self.created.isoformat().replace(':', '')[:15], str(self.seq)]
+        return "_".join([
+            item or ''
+            for item in items
+        ])
 
     base_form_class = IndicatorDirectoryForm

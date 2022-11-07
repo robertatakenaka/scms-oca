@@ -2,7 +2,7 @@
 {% block content %}
 <script src="{% static 'js/echarts.js' %}"></script>
 <div>
-    <div id="graph1" style="width: 1200px;height:800px;"></div>
+    <div id="graph1" style="width: 1200px;height:2400px;"></div>
     <!-- https://echarts.apache.org/examples/en/editor.html?c=dataset-series-layout-by -->
     <script type="text/javascript">
         var myChart = echarts.init(document.getElementById('graph1'));
@@ -12,12 +12,12 @@
   dataset: {
     source: {{ source | safe }}
   },
-  xAxis: [
+  yAxis: [
     { type: 'category', gridIndex: 0 },
     { type: 'category', gridIndex: 1 }
   ],
-  yAxis: [{ gridIndex: 0 }, { gridIndex: 1 }],
-  grid: [{ bottom: '55%' }, { top: '55%' }],
+  xAxis: [{ gridIndex: 0 }, { gridIndex: 1 }],
+  grid: [{ bottom: '55%', containLabel: true }, { top: '55%', containLabel: true }],
   series: {{ series | safe }}
 };
 

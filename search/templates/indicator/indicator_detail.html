@@ -15,9 +15,46 @@
   <div class="content-wrap pt-0">
     <div class="container clearfix">
       <div class="section m-1 p-1 mt-4">
-
+                
         <h1>{{ object.title }}</h1>
+                
+        <!-- Navegação entre as versões -->
         <div class="container">
+            <nav aria-label="...">
+                <ul class="pagination">
+                    
+                    <li class="page-item" aria-current="page">
+                        {% if object.previous_record.id %}
+                            <a class="page-link" href="{% url 'search:indicator_detail' object.previous_record.id %}">
+                                < {% trans 'versões anteriores' %}
+                            </a>
+                        {% endif %}
+                    </li>
+                    <li class="page-item active">
+                        {% if object.seq %}
+                        <a class="page-link" href="#">
+                            {% trans object.validity %} |
+                            {% trans 'Generated' %}: {{ object.created |date:"r" }}
+                        </a>
+                        {% endif %}
+                    </li> 
+                    <li class="page-item">
+                        {% if object.posterior_record.seq %}
+                            <a class="page-link" href="{% url 'search:indicator_detail' object.posterior_record.id %}">
+                                {% trans 'versões posteriores' %} >
+                            </a>
+                        {% endif %}
+                    </li>
+                    <li class="page-item">
+                        {% if object.latest != object.id %}
+                            <a class="page-link" href="{% url 'search:indicator_detail' object.latest %}">
+                                {% trans 'ir para a versão mais recente' %}
+                            </a>
+                        {% endif %}
+                    </li>
+                    
+                </ul>
+            </nav>
             <p>
                 <span class="badge badge-primary">{{ object.action_and_practice.action }}</span>
                 <span class="badge badge-secondary">{{ object.action_and_practice.classification }}</span>
@@ -26,56 +63,37 @@
                 <span class="badge badge-warning">{{ object.measurement }}</span>
             </p>
         </div>
+
         <div class="container">
-            <p>{% trans 'validity' %}: {{ object.validity }} | {% trans 'Generated' %}: {{ object.created |date:"c" }}</p>
-            <nav aria-label="...">
-                <ul class="pagination">
-                    
-                    <li class="page-item" aria-current="page">
-                        {% if object.previous_record.id %}
-                            <a class="page-link" href="{% url 'search:indicator_detail' object.previous_record.id %}">
-                                <
-                            </a>
-                        {% endif %}
-                    </li>
-                    <li class="page-item active">
-                        {% if object.seq %}
-                        <a class="page-link" href="#">
-                            {{ object.seq }}
-                        </a>
-                        {% endif %}
-                    </li> 
-                    <li class="page-item">
-                        {% if object.posterior_record.seq %}
-                            <a class="page-link" href="{% url 'search:indicator_detail' object.posterior_record.id %}">
-                                >
-                            </a>
-                        {% endif %}
-                    </li>
-                    
-                </ul>
-            </nav>
-        </div>
-        <div class="container">
+            <div>
+                {% if object.keywords.all %}
+                    <p>{% trans 'Palavras-chave' %}:
+                        {% for item in object.keywords.all %}
+                            <span class="badge badge-info">{{ item.name }}</span>
+                        {% endfor %}
+                    </p>
+                {% endif %}
+            </div>
             {% if object.description %}
                 <div>
                     <p>{{ object.description }}</p>
                 </div>
             {% endif %}
-            {% if object.keywords.all %}
-                <div>
-                    <p>{% trans 'Key words' %}:
-                        {% for item in object.keywords.all %}
-                            <span class="badge badge-info">{{ item.name }}</span>
-                        {% endfor %}
-                    </p>
-                </div>
-            {% endif %}
         </div>
         <div class="container">
-            <p class="text">Dataset: <a href="{% url 'search:indicator_dataset' object.id %}">dataset</a></p>
-            <p class="text">computed: <a href="{% url 'search:indicator_computed' object.id %}">computed</a></p>
-            <div>
+            <p>
+                <a href="{% url 'search:indicator_raw_data' object.id %}">{% trans 'download dados brutos' %}</a>
+                | 
+                <a href="{% url 'search:indicator_summarized' object.id %}">{% trans 'download dados computados' %}</a>
+                | 
+                <a href="#graphic">{% trans 'ver gráfico' %}</a>
+                | 
+                <a href="#summarized">{% trans 'ver dados computados' %}</a>
+            </p>
+        </div>
+        <a name="graphic"/>
+        <div class="container">
+            <h3>{% trans 'Gráfico' %}</h3>
             {% if graphic_type == 'bar-label-rotation' %}
                 {% include 'indicator/echarts/bar-label-rotation.html' %}
             {% elif graphic_type == 'categories_1_grid' %}
@@ -85,8 +103,55 @@
             {% else %}
                 {% include 'indicator/echarts/dataset-encode0.html' %}
             {% endif %}
-            </div>
+
         </div>
+        <a name="summarized"/>
+        <div class="container">
+            {% if object.summarized.items %} 
+                <h3>{% trans 'Dados computados' %}</h3>
+                <div class="row justify-content-md-left">
+                    <div class="col-md-auto">
+                        <table class="table">
+                            <thead>
+                              <tr>
+                                {% for val in table_header %}
+                                    <th scope="col">{{val}}</th>
+                                {% endfor %}
+                              </tr>
+                            </thead>
+                            <tbody>
+                                {% for row in object.summarized.items %}
+                                <tr>
+                                    {% for val in row.values %}
+                                        <td>{{val}}</td>
+                                    {% endfor %}
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table> 
+                    </div>
+                </div>
+            {% endif %}
+        </div>        
+        <!-- TODO https://zeroheight.com/66513f950/p/7103ca-abas/b/94fa49 -->
+        <!-- div class="p-2">
+            <div class="container">
+                <ul class="nav nav-tabs" id="myTab" role="tablist">
+                    <li class="nav-item">
+                        <a class="nav-link active" id="summarized-tab" data-toggle="tab" href="#summarized" role="tab" aria-controls="summarized" aria-selected="true">{% trans 'Dados' %}</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" id="graphic-tab" data-toggle="tab" href="#graphic" role="tab" aria-controls="graphic" aria-selected="true">
+                          {% trans 'Gráfico' %}
+                        </a>
+                    </li>
+                </ul>
+                <div class="tab-content" id="myTabContent">
+                    <div class="tab-pane fade show active" id="summarized" role="tabpanel" aria-labelledby="summarized-tab">{% trans 'Dados' %}</div>
+                    <div class="tab-pane fade" id="graphic" role="tabpanel" aria-labelledby="graphic-tab">{% trans 'Gráfico' %} xxxx</div>
+                </div>
+            </div>
+        </div-->
     </div>
   </div>
 </section>

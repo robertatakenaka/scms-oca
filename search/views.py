@@ -1,3 +1,5 @@
+import csv
+import os
 import datetime
 import math
 from collections import OrderedDict
@@ -9,7 +11,7 @@ from django.shortcuts import render
 from django.template import loader
 
 from indicator.models import Indicator
-from indicator import choices as indicator_choices
+from indicator import controller as indicator_controller
 from . import controller
 
 
@@ -105,23 +107,50 @@ def indicator_detail(request, indicator_id):
     except Indicator.DoesNotExist:
         raise Http404("Indicator does not exist")
 
+    latest_params = indicator_controller.get_indicator_parameters(indicator)
+    if latest_params:
+        indicator.latest = indicator_controller.get_latest_version(**latest_params).id
     parameters = controller.indicator_detail(request, indicator)
     return render(request, 'indicator/indicator_detail.html', parameters)
 
 
-def indicator_computed(request, indicator_id):
+def indicator_summarized(request, indicator_id):
     try:
         indicator = Indicator.objects.get(
             pk=indicator_id, record_status='PUBLISHED')
     except Indicator.DoesNotExist:
         raise Http404("Indicator does not exist")
-    return render(request, 'indicator/indicator_computed.html', {"object": indicator})
+
+    filename, ext = os.path.splitext(os.path.basename(indicator.raw_data.name))
+    filename = filename + ".csv"
+
+    response = HttpResponse(
+        content_type='text/csv',
+        headers={'Content-Disposition': 'attachment; filename="%s"' % filename},
+    )
+
+    for item in indicator.summarized['items']:
+        fieldnames = item.keys()
+        break
+
+    writer = csv.DictWriter(response, fieldnames=fieldnames)
+
+    writer.writeheader()
+    for item in indicator.summarized['items']:
+        writer.writerow(item)
+    return response
 
 
-def indicator_dataset(request, indicator_id):
+def indicator_raw_data(request, indicator_id):
     try:
         indicator = Indicator.objects.get(
             pk=indicator_id, record_status='PUBLISHED')
     except Indicator.DoesNotExist:
         raise Http404("Indicator does not exist")
-    return render(request, 'indicator/indicator_dataset.html', {"object": indicator})
+
+    filename = os.path.basename(indicator.raw_data.name)
+    response = HttpResponse(
+        indicator.raw_data,
+        content_type="application/zip")
+    response['Content-Disposition'] = "attachment; filename=%s" % filename
+    return response
