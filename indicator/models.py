@@ -105,7 +105,6 @@ class Indicator(CommonControlField):
     link = models.URLField(_("Link"), null=True, blank=True)
     raw_data = models.FileField(_("JSONL Zip File"), null=True, blank=True, max_length=255)
     summarized = models.JSONField(_("JSON File"), null=True, blank=True)
-    total = models.IntegerField(_("Observations number"), null=True, default=None)
 
     keywords = TaggableManager(_("Keywords"), blank=True)
 
@@ -155,7 +154,6 @@ class Indicator(CommonControlField):
             models.Index(fields=['source']),
             models.Index(fields=['start_date_year']),
             models.Index(fields=['title']),
-            models.Index(fields=['total']),
             models.Index(fields=['validity']),
         ]
 

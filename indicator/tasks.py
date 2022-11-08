@@ -22,10 +22,11 @@ def task_evolution_of_scientific_production_all(self, creator_id, years_number=N
             category_id=category_id,
             years_range=controller.get_years_range(years_number),
         )
+        break
 
     contexts = [
         'AFFILIATION_UF',
-        'AFFILIATION',
+        # 'AFFILIATION',
         # 'THEMATIC_AREA',
     ]
     for category_id in categories:
@@ -36,6 +37,7 @@ def task_evolution_of_scientific_production_all(self, creator_id, years_number=N
                 years_range=controller.get_years_range(years_number),
                 context_id=context_id,
             )
+            break
 
 
 @celery_app.task(bind=True, name=_("Geração de todos os indicadores de ações em Ciência Aberta"))

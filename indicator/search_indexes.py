@@ -22,7 +22,6 @@ class IndicatorIndex(indexes.SearchIndex, indexes.Indexable):
     link = indexes.CharField(model_attr="link", null=True)
     record_status = indexes.CharField(model_attr="record_status", null=True)
     source = indexes.CharField(model_attr="source", null=True)
-    total = indexes.CharField(model_attr="total", null=True)
 
     # raw_data = indexes.CharField(null=True)
 

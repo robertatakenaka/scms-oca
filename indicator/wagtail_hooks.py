@@ -39,7 +39,6 @@ class IndicatorAdmin(ModelAdmin):
         'title',
         'record_status',
         'validity',
-        'total',
         'updated',
     )
 
@@ -49,7 +48,6 @@ class IndicatorAdmin(ModelAdmin):
         'action_and_practice__practice__name',
         'record_status',
         'validity',
-        'total',
         'scope',
         'measurement',
         'scientific_production__communication_object',
