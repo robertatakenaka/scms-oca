@@ -25,7 +25,7 @@ def task_evolution_of_scientific_production_all(self, creator_id, years_number=N
 
     contexts = [
         'AFFILIATION_UF',
-        # 'AFFILIATION',
+        'AFFILIATION',
         # 'THEMATIC_AREA',
     ]
     for category_id in categories:
@@ -40,21 +40,21 @@ def task_evolution_of_scientific_production_all(self, creator_id, years_number=N
 
 @celery_app.task(bind=True, name=_("Geração de todos os indicadores de ações em Ciência Aberta"))
 def task_directory_numbers_all(self, creator_id):
-    # controller.directory_numbers(
-    #     creator_id,
-    #     category_id='CA_ACTION',
-    #     category2_id=None,
-    # )
-    # controller.directory_numbers(
-    #     creator_id,
-    #     category_id="CA_ACTION",
-    #     category2_id="CA_PRACTICE",
-    # )
-    # controller.directory_numbers(
-    #     creator_id,
-    #     category_id="CA_ACTION",
-    #     category2_id="THEMATIC_AREA",
-    # )
+    controller.directory_numbers(
+        creator_id,
+        category_id='CA_ACTION',
+        category2_id=None,
+    )
+    controller.directory_numbers(
+        creator_id,
+        category_id="CA_ACTION",
+        category2_id="CA_PRACTICE",
+    )
+    controller.directory_numbers(
+        creator_id,
+        category_id="CA_ACTION",
+        category2_id="THEMATIC_AREA",
+    )
     controller.directory_numbers_in_context(
         creator_id,
         category_id="CA_ACTION",

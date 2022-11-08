@@ -29,10 +29,6 @@ from . import choices
 User = get_user_model()
 
 
-STANDARD_NAMES = {
-    'organization': 'institutions',
-}
-
 OA_STATUS_ITEMS = ('gold', 'bronze', 'green', 'hybrid', )
 
 CATEGORIES = {
@@ -65,6 +61,7 @@ CONTEXTS = {
     'AFFILIATION_UF': {
         'title': '',
         'type': choices.GEOGRAPHIC,
+        'preposition': _('em'),
         'name': 'contributors__affiliation__official__location__state',
         'category_attributes': [
             'contributors__affiliation__official__location__state__name',
@@ -73,6 +70,7 @@ CONTEXTS = {
     'AFFILIATION': {
         'title': 'instituição',
         'type': choices.INSTITUTIONAL,
+        'preposition': _('de'),
         'name': 'institution',
         'category_attributes': [
             'contributors__affiliation__official__name',
@@ -86,12 +84,14 @@ CONTEXTS = {
     'THEMATIC_AREA': {
         'name': 'área temática',
         'type': choices.THEMATIC,
+        'preposition': _('em'),
         'category_attributes': [
             'thematic_areas__level0',
         ]},
     'LOCATION': {
         'title': '',
         'type': choices.GEOGRAPHIC,
+        'preposition': _('em'),
         'name': 'locations__state',
         'category_attributes': [
                 'locations__state__name',
@@ -111,6 +111,7 @@ CONTEXTS = {
     'INSTITUTION': {
         'title': 'instituição',
         'type': choices.INSTITUTIONAL,
+        'preposition': _('de'),
         'name': 'institution',
         'category_attributes': [
             'institutions__name',
@@ -160,28 +161,12 @@ def _add_category_name(items, cat1_attributes, cat1_name=None, cat2_attributes=N
     for item in items:
         logging.info(item)
         if item['count']:
-            cat1_value = " | ".join([
-                item[k] or ''
-                for k in cat1_attributes
-                if item.get(k)
-            ])
-            item.update(
-                {
-                    cat1_name: cat1_value or '',
-                    "count": item['count'],
-                }
-            )
+            item.update({
+                cat1_name: _concat_values(cat1_attributes, item.copy(), " | "),
+                "count": item['count'],
+            })
             if cat2_attributes and cat2_name:
-                cat2_value = " | ".join([
-                    item[k] or ''
-                    for k in cat2_attributes
-                    if item.get(k)
-                ])
-                item.update(
-                    {
-                        cat2_name: cat2_value or '',
-                    }
-                )
+                item[cat2_name] = _concat_values(cat2_attributes, item.copy(), " | ")
             yield item
 
 
@@ -475,18 +460,16 @@ def directory_numbers(
         creator_id,
         category_id,
         category2_id=None,
-        context_params=None,
         ):
 
-    context_params = context_params or {}
-    keywords = list([v for v in context_params.values() if v])
-    logging.info(keywords)
+    preposition = _("no Brasil")
+
     category_title = CATEGORIES[category_id]['title']
     category_name = CATEGORIES[category_id]['name']
     category_attributes = CATEGORIES[category_id]['category_attributes']
     category_attributes_options = CATEGORIES[category_id].get('category_attributes_options')
     title = "Número de {}".format(category_title)
-    cat_attributes = category_attributes
+    cat_attributes = category_attributes.copy()
 
     if category2_id:
         category2_title = CATEGORIES[category2_id]['title']
@@ -495,8 +478,9 @@ def directory_numbers(
         category2_attributes_options = CATEGORIES[category2_id]['category_attributes_options']
         title = "Número de {} por {}".format(category_title, category2_title)
         cat_attributes += category2_attributes
-    if keywords:
-        title += " " + ", ".join(keywords)
+
+    title += f" {preposition} "
+
     scope = choices.GENERAL
     measurement = choices.FREQUENCY
 
@@ -513,7 +497,7 @@ def directory_numbers(
         scope=scope,
         measurement=measurement,
         creator_id=creator_id,
-        keywords=keywords
+        keywords=_('Brasil'),
     )
     indicator.save_raw_data(
         list(EducationDirectory.objects.iterator()) +
@@ -534,7 +518,9 @@ def directory_numbers(
         }
     else:
         indicator.summarized = {
-            "items": list(_add_category_name(items, category_attributes))
+            "items": list(
+                _add_category_name(
+                    items, category_attributes, category_name))
         }
     indicator.total = len(items)
     indicator.creator_id = creator_id
@@ -574,7 +560,8 @@ def directory_numbers_in_context(
     category_attributes = CATEGORIES[category_id]['category_attributes']
     category_attributes_options = CATEGORIES[category_id].get('category_attributes_options')
     title = "Número de {}".format(category_title)
-    cat_attributes = category_attributes
+    cat_attributes = category_attributes.copy()
+
     if category2_id:
         category2_title = CATEGORIES[category2_id]['title']
         category2_name = CATEGORIES[category2_id]['name']
@@ -600,8 +587,14 @@ def directory_numbers_in_context(
 
             keywords = list([v for v in context_params.values() if v])
 
+        title_ = title
+        if keywords:
+            title_ += (
+                " " + CONTEXTS[context_id]['preposition'] +
+                " " + ", ".join(keywords)
+            )
         indicator = create_record(
-            title=title,
+            title=title_,
             action=None,
             classification=None,
             practice=None,
@@ -619,13 +612,18 @@ def directory_numbers_in_context(
                 'items': list(_add_category_name(
                     items,
                     category_attributes, category_name,
-                    category2_attributes, category2_name)),
+                    category2_attributes, category2_name,
+                    )),
                 'cat1_name': category_name,
                 'cat2_name': category2_name,
             }
         else:
             indicator.summarized = {
-                "items": list(_add_category_name(items, category_attributes))
+                'items': list(_add_category_name(
+                    items,
+                    category_attributes, category_name,
+                    )),
+                'cat1_name': category_name,
             }
         indicator.total = len(items)
         indicator.creator_id = creator_id
@@ -674,6 +672,7 @@ def journals_numbers(
         category_id,
         ):
 
+    category_title = CATEGORIES[category_id]['title']
     action, classification, practice = (
         _get_scientific_production__action_classification_practice())
 
@@ -726,7 +725,7 @@ def _journals_numbers(
             "Não implementado para %s" % category_attributes)
 
     filtered = ScholarlyArticles.objects.filter(
-        open_access_status__in=['gold', 'bronze', 'green', 'hybrid']
+        open_access_status__in=OA_STATUS_ITEMS
     )
     summarized = filtered.values(
             *category_attributes
@@ -758,8 +757,8 @@ def str_years_list(years_range):
 ##########################################################################
 
 
-def _concat_values(category_names, category_values):
-    return " , ".join([
+def _concat_values(category_names, category_values, sep=", "):
+    return sep.join([
                 category_values[k]
                 for k in category_names
                 if category_values.get(k)
@@ -787,6 +786,7 @@ def evolution_of_scientific_production_in_context(
             category_id,
             years_range,
             context_params,
+            context_id,
         )
 
 
@@ -831,6 +831,7 @@ def evolution_of_scientific_production(
         category_id,
         years_range,
         context_params=None,
+        context_id=None,
         ):
 
     category_title = CATEGORIES[category_id]['title']
@@ -876,8 +877,8 @@ def evolution_of_scientific_production(
         **context_params,
     )
     indicator = create_record(
-        title='Evolução do número de artigos em acesso aberto por {} {}-{}'.format(
-            category_title, years_range[0], years_range[-1]),
+        title=_get_scientific_production_indicator_title(
+            category_title, context_id, keywords, years_range),
         action=action,
         classification=classification,
         practice=practice,
@@ -912,3 +913,20 @@ def evolution_of_scientific_production(
     # indicator.description = " | ".join(keywords)
     indicator.creator_id = creator_id
     indicator.save()
+
+
+def _get_scientific_production_indicator_title(category_title,
+                                               context_id,
+                                               keywords,
+                                               years_range):
+    context = " " + _('no Brasil')
+    if context_id:
+        context = f" {CONTEXTS[context_id]['preposition']} {', '.join(keywords)}"
+
+    return (
+        'Evolução do número de artigos em acesso aberto{}, {}-{}, por {}'.format(
+            context,
+            years_range[0], years_range[-1],
+            category_title,
+        )
+    )

@@ -16,6 +16,6 @@ def directory_numbers(creator_id):
 
 def run():
     controller.delete()
-    # journals_numbers(creator_id=1)
     directory_numbers(1)
-    # evolution_of_scientific_production_all(1)
+    evolution_of_scientific_production_all(1)
+    # journals_numbers(creator_id=1)

@@ -14,30 +14,34 @@ def indicator_detail(request, indicator):
     try:
         cat2_name = indicator.summarized['cat2_name']
     except KeyError:
-        return _parameters_for_ranking_indicator(indicator, graphic_type)
+        return _parameters_for_ranking_indicator(
+            indicator, graphic_type,
+            indicator.summarized.get('cat1_name')
+            )
     else:
         return _parameters_for_categories_indicator(
             indicator, graphic_type, cat2_name)
 
 
-def _parameters_for_ranking_indicator(indicator, graphic_type):
-        names = []
-        values = []
-        for item in indicator.summarized['items']:
-            value = item.get('count') or item.get("value")
-            name = item.get("name")
-            if name and value:
-                names.append(name)
-                values.append(value)
-        graphic_height = min([len(names) * 10, 30000])
-        return {
-            "graphic_type": "",
-            "object": indicator,
-            "table_header": list(indicator.summarized['items'][0].keys()),
-            "names": str(names),
-            "values": str(values),
-            "graphic_height": graphic_height if graphic_height > 400 else 800,
-        }
+def _parameters_for_ranking_indicator(indicator, graphic_type, cat1_name=None):
+    cat1_name = cat1_name or "name"
+    names = []
+    values = []
+    for item in indicator.summarized['items']:
+        value = item.get('count') or item.get("value")
+        name = item.get(cat1_name)
+        if name and value:
+            names.append(name)
+            values.append(value)
+    graphic_height = min([len(names) * 10, 30000])
+    return {
+        "graphic_type": "",
+        "object": indicator,
+        "table_header": list(indicator.summarized['items'][0].keys()),
+        "names": str(names),
+        "values": str(values),
+        "graphic_height": graphic_height if graphic_height > 400 else 800,
+    }
 
 
 def _parameters_for_categories_indicator(indicator, graphic_type, cat1_name):

@@ -109,21 +109,25 @@
         <div class="container">
             {% if object.summarized.items %} 
                 <h3>{% trans 'Dados computados' %}</h3>
-                <div class="row justify-content-md-left">
+                <div class="row justify-content-md-left small">
                     <div class="col-md-auto">
-                        <table class="table">
+                        <table class="table table-striped">
                             <thead>
                               <tr>
                                 {% for val in table_header %}
-                                    <th scope="col">{{val}}</th>
+                                    <th scope="col">{{ val }}</th>
                                 {% endfor %}
                               </tr>
                             </thead>
                             <tbody>
                                 {% for row in object.summarized.items %}
                                 <tr>
-                                    {% for val in row.values %}
-                                        <td>{{val}}</td>
+                                    {% for key, val in row.items %}
+                                        {% if key == 'count' %}
+                                            <td class="text-right">{{ val }}</td>
+                                        {% else %}
+                                            <td class="text-center">{{ val }}</td>
+                                        {% endif %}
                                     {% endfor %}
                                 </tr>
                                 {% endfor %}
