@@ -17,8 +17,11 @@ class IndicatorIndex(indexes.SearchIndex, indexes.Indexable):
 
     title = indexes.CharField(model_attr="title", null=True)
     description = indexes.CharField(model_attr="description", null=True)
-    start_date = indexes.CharField(model_attr="start_date_year", null=True)
-    end_date = indexes.CharField(model_attr="end_date_year", null=True)
+    # start_date = indexes.CharField(model_attr="start_date_year", null=True)
+    # end_date = indexes.CharField(model_attr="end_date_year", null=True)
+
+    year = indexes.CharField(model_attr="start_date_year", null=True)
+    years_range = indexes.CharField(null=True)
     link = indexes.CharField(model_attr="link", null=True)
     record_status = indexes.CharField(model_attr="record_status", null=True)
     source = indexes.CharField(model_attr="source", null=True)
@@ -30,9 +33,10 @@ class IndicatorIndex(indexes.SearchIndex, indexes.Indexable):
     action = indexes.CharField(null=True)
     practice = indexes.CharField(null=True)
     communication_object = indexes.CharField(null=True)
-    open_access_status = indexes.CharField(null=True)
-    use_license = indexes.CharField(null=True)
-    apc = indexes.CharField(null=True)
+    oa_status = indexes.CharField(null=True)
+    # open_access_status = indexes.MultiValueField(null=True)
+    # use_license = indexes.MultiValueField(null=True)
+    # apc = indexes.CharField(null=True)
 
     # ManyToMany
     keywords = indexes.MultiValueField(null=True)
@@ -45,6 +49,12 @@ class IndicatorIndex(indexes.SearchIndex, indexes.Indexable):
     cities = indexes.MultiValueField(null=True)
     states = indexes.MultiValueField(null=True)
     regions = indexes.MultiValueField(null=True)
+
+    def prepare_years_range(self, obj):
+        return (
+            obj.start_date_year and obj.end_date_year and
+            f"{obj.start_date_year}-{obj.end_date_year}"
+        )
 
     def prepare_action(self, obj):
         return obj.action_and_practice and obj.action_and_practice.action.name
@@ -65,15 +75,10 @@ class IndicatorIndex(indexes.SearchIndex, indexes.Indexable):
             obj.scientific_production and
             obj.scientific_production.apc)
 
-    def prepare_use_license(self, obj):
-        return (
-            obj.scientific_production and
-            obj.scientific_production.use_license)
-
-    def prepare_open_access_status(self, obj):
-        return (
-            obj.scientific_production and
-            obj.scientific_production.open_access_status)
+    def prepare_oa_status(self, obj):
+        for text in ('tipo', 'licença'):
+            if text in obj.title.lower():
+                return text
 
     # def prepare_file_csv(self, obj):
     #     return obj.raw_data and obj.raw_data.url
@@ -85,8 +90,11 @@ class IndicatorIndex(indexes.SearchIndex, indexes.Indexable):
         return ""
 
     def prepare_institutions(self, obj):
+        institutions = set()
         if obj.institutions:
-            return [institution.name for institution in obj.institutions.all()]
+            for institution in obj.institutions.all():
+                institutions.add(institution)
+        return institutions
 
     def prepare_thematic_areas(self, obj):
         thematic_areas = set()

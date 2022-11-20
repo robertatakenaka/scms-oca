@@ -18,7 +18,14 @@ from policy_directory.models import PolicyDirectory
 from scholarly_articles.models import ScholarlyArticles, Affiliations
 from location.models import Location
 from institution.models import Institution
-from usefulmodels.models import Practice, State, Action, Country, ThematicArea
+from usefulmodels.models import (
+    Action,
+    Practice,
+    City,
+    State,
+    Country,
+    ThematicArea,
+)
 from .models import Indicator, ActionAndPractice, ScientificProduction
 from . import choices
 
@@ -53,7 +60,7 @@ CATEGORIES = {
         'name': 'área temática',
         'title': 'área temática',
         'category_attributes': [
-            'thematic_areas__level0',
+            'thematic_areas__level1',
         ]},
 }
 
@@ -667,6 +674,7 @@ def journals_numbers(
         creator_id=creator_id,
         scientific_production=scientific_production,
         start_date_year=datetime.now().year,
+        keywords=[category_title],
     )
 
     dataset, summarized = _journals_numbers(category_attributes)
@@ -847,8 +855,57 @@ def evolution_of_scientific_production(
         'cat2_name': 'year',
         'cat2_values': years_as_str,
     }
+    # _add_values_to_category_cluster(
+    #     indicator, summarized, category_id)
+    _add_values_to_context_cluster(
+        indicator, context_id, context_params,
+    )
     save_indicator(indicator, keywords=keywords)
     indicator.save_raw_data(dataset.iterator())
+
+
+def _add_values_to_context_cluster(indicator, context_id, context_params):
+    if context_id:
+        if context_id == 'AFFILIATION':
+            prefix = 'contributors__affiliation__official__'
+            model = Institution
+            attribute = indicator.institutions
+        elif context_id == 'AFFILIATION_UF':
+            prefix = 'contributors__affiliation__official__location__'
+            model = Location
+            attribute = indicator.locations
+
+        qs = {}
+        qs_isnull = []
+        for name, value in context_params.items():
+            k = name.replace(prefix, '')
+            if value:
+                qs[k] = value
+        logging.info(qs)
+        for item in model.objects.filter(**qs).iterator():
+            attribute.add(item)
+        logging.info(item)
+
+
+def _add_values_to_category_cluster(
+        indicator, summarized, category_id):
+    category = CATEGORIES[category_id]
+
+    if category_id == 'OPEN_ACCESS_STATUS':
+        indicator.scientific_production.open_access_status = (
+            _get_category_attributes(summarized, 'open_access_status')
+        )
+    elif category_id == 'USE_LICENSE':
+        indicator.scientific_production.use_license = (
+            _get_category_attributes(summarized, 'use_license')
+        )
+
+
+def _get_category_attributes(summarized, attr_name):
+    return " | ".join([
+        item[attr_name]
+        for item in summarized
+    ])
 
 
 def _get_scientific_production_indicator_title(category_title,

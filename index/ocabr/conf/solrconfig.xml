@@ -198,6 +198,14 @@
          <str name="facet.field">regions</str>
          <str name="facet.field">thematic_areas</str>
 
+         <str name="facet.field">year</str>
+         <str name="facet.field">years_range</str>
+         <str name="facet.field">oa_status</str>
+         <!--str name="facet.field">open_access_status</str>
+         <str name="facet.field">use_license</str-->
+         <!-- atualmente é só journal-article
+         <str name="facet.field">communication_object</str -->
+
          <str name="facet.limit">30</str>
          <str name="facet.mincount">1</str>
      </lst>
