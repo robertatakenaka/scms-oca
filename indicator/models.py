@@ -84,7 +84,7 @@ class Indicator(CommonControlField):
             link=self.link,
             source='OCABr',
             updated=self.updated.isoformat(),
-            creator=self.creator or 'SciELO',
+            creator='SciELO',
         )
         indicator = {}
         indicator['indicator'] = {
@@ -112,8 +112,9 @@ class Indicator(CommonControlField):
                 data = item.data
             except:
                 data = {"teste": "teste"}
-            data.update(self.header)
-            yield f"{json.dumps(data)}\n"
+            else:
+                data.update(self.header)
+                yield f"{json.dumps(data)}\n"
 
     class Meta:
         indexes = [

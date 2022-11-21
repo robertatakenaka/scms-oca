@@ -348,7 +348,7 @@ def _add_category_name(items, cat1_attributes, cat1_name=None, cat2_attributes=N
                 item[cat2_name] = _concat_values(cat2_attributes, item.copy(), " | ")
             yield item
 
-
+#########################################################################
 def delete():
     for item in Indicator.objects.iterator():
         try:
@@ -363,6 +363,14 @@ def delete():
         except Exception as e:
             logging.exception(e)
 
+    for item in PeriodicTask.objects.filter(name__contains='indicadores').iterator():
+        try:
+            item.delete()
+        except Exception as e:
+            logging.exception(e)
+
+
+#########################################################################
 
 def _add_param(params, name, value):
     if value:
