@@ -27,7 +27,7 @@ def get_default_action():
 class EducationDirectory(CommonControlField):
     class Meta:
         verbose_name_plural = _("Education Data")
-        verbose_name= _("Education Data")
+        verbose_name = _("Education Data")
         permissions = (
             (MUST_BE_MODERATE, _("Must be moderated")),
             ("can_edit_title", _("Can edit title")),
