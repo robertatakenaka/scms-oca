@@ -125,10 +125,14 @@ class Indicator(CommonControlField):
         return f"/indicator/indicator/edit/{self.id}/"
 
     @property
-    def header(self):
-        link = "https://ocabr.org/search/indicator/{}/detail/".format(
-            self.id,
+    def indicator_page_link(self):
+        return "https://ocabr.org/search/indicator/{}/detail/".format(
+            self.slug or self.id,
         )
+
+    @property
+    def header(self):
+        link = self.indicator_page_link
         d = dict(
             title=self.title,
             description=self.description,
