@@ -441,8 +441,8 @@ def fix_params(params):
     for name, value in params.items():
         if value:
             args[name] = value
-        else:
-            args[f"{name}__isnull"] = True
+        # else:
+        #     args[f"{name}__isnull"] = True
     return args
 
 
@@ -1185,10 +1185,10 @@ def _add_context(indicator, context_id, context_params):
             or context_params.get("locations__state__acronym")
         )
 
-        args = dict(
+        args = fix_params(dict(
             state_name=state__name,
             state_acronym=state__acronym,
-        )
+        ))
         location = Location.get_or_create_state(
             indicator.creator,
             **args,
